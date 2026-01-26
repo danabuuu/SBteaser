@@ -1,669 +1,331 @@
-import React, { useState, useEffect } from 'react';
-import { Trophy, Users, Award, Lock, Eye, EyeOff, LogOut, Settings, RefreshCw } from 'lucide-react';
-import { createClient } from '@supabase/supabase-js';
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Super Bowl Teaser</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState, useEffect } = React;
+    const { createClient } = supabase;
 
 // Replace with your Supabase credentials
 const SUPABASE_URL = 'https://eggswgehszlqosxyxfap.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVnZ3N3Z2Voc3pscW9zeHl4ZmFwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk0NjQ2MjAsImV4cCI6MjA4NTA0MDYyMH0.ZGOdzBROuCkjadPvBNdTWVTkGbpZkhZcyhxOI228msI';
 
-const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-export default function SuperBowlTeaser() {
-  const [entries, setEntries] = useState([]);
-  const [questions, setQuestions] = useState([]);
-  const [correctAnswers, setCorrectAnswers] = useState({});
-  const [view, setView] = useState('entry');
-  const [isAdminLoggedIn, setIsAdminLoggedIn] = useState(false);
-  const [loginForm, setLoginForm] = useState({ username: '', password: '' });
-  const [showPassword, setShowPassword] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [formData, setFormData] = useState({
-    name: '',
-    answers: Array(20).fill(null),
-    tiebreaker: ''
-  });
-  const [editingQuestions, setEditingQuestions] = useState(false);
+    const supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-  useEffect(() => {
-    loadData();
-    
-    // Subscribe to realtime changes
-    const entriesSubscription = supabase
-      .channel('entries-channel')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'entries' }, () => {
-        loadEntries();
-      })
-      .subscribe();
+    // SVG Icons
+    const Trophy = () => <svg className="w-8 h-8 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg>;
+    const Users = () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" /></svg>;
+    const Lock = () => <svg className="w-8 h-8 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>;
+    const Eye = () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>;
+    const EyeOff = () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" /></svg>;
 
-    const answersSubscription = supabase
-      .channel('answers-channel')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'correct_answers' }, () => {
-        loadCorrectAnswers();
-      })
-      .subscribe();
+    function App() {
+      const [entries, setEntries] = useState([]);
+      const [questions, setQuestions] = useState([]);
+      const [correctAnswers, setCorrectAnswers] = useState({});
+      const [view, setView] = useState('entry');
+      const [isAdmin, setIsAdmin] = useState(false);
+      const [loginForm, setLoginForm] = useState({ username: '', password: '' });
+      const [showPassword, setShowPassword] = useState(false);
+      const [loading, setLoading] = useState(false);
+      const [formData, setFormData] = useState({
+        name: '',
+        answers: Array(20).fill(null),
+        tiebreaker: ''
+      });
 
-    return () => {
-      entriesSubscription.unsubscribe();
-      answersSubscription.unsubscribe();
-    };
-  }, []);
+      useEffect(() => {
+        loadData();
+      }, []);
 
-  const loadData = async () => {
-    await Promise.all([loadEntries(), loadQuestions(), loadCorrectAnswers()]);
-  };
-
-  const loadEntries = async () => {
-    const { data, error } = await supabase
-      .from('entries')
-      .select('*')
-      .order('created_at', { ascending: true });
-    
-    if (!error && data) {
-      setEntries(data.map(entry => ({
-        ...entry,
-        answers: bitsToArray(entry.answers_bits)
-      })));
-    }
-  };
-
-  const loadQuestions = async () => {
-    const { data, error } = await supabase
-      .from('questions')
-      .select('questions')
-      .eq('id', 1)
-      .single();
-    
-    if (!error && data) {
-      setQuestions(data.questions);
-    }
-  };
-
-  const loadCorrectAnswers = async () => {
-    const { data, error } = await supabase
-      .from('correct_answers')
-      .select('answers_bits, answered_mask')
-      .eq('id', 1)
-      .single();
-    
-    if (!error && data) {
-      const answers = {};
-      for (let i = 0; i < 20; i++) {
-        const isAnswered = (data.answered_mask & (1 << i)) !== 0;
-        if (isAnswered) {
-          answers[i] = (data.answers_bits & (1 << i)) !== 0;
+      const loadData = async () => {
+        // Load entries
+        const { data: entriesData } = await supabaseClient
+          .from('entries')
+          .select('*')
+          .order('created_at');
+        if (entriesData) {
+          setEntries(entriesData.map(e => ({
+            ...e,
+            answers: bitsToArray(e.answers_bits)
+          })));
         }
-      }
-      setCorrectAnswers(answers);
-    }
-  };
 
-  // Convert array of booleans to 20-bit integer
-  const arrayToBits = (arr) => {
-    let bits = 0;
-    for (let i = 0; i < 20; i++) {
-      if (arr[i] === true) {
-        bits |= (1 << i);
-      }
-    }
-    return bits;
-  };
+        // Load questions
+        const { data: questionsData } = await supabaseClient
+          .from('questions')
+          .select('questions')
+          .eq('id', 1)
+          .single();
+        if (questionsData) setQuestions(questionsData.questions);
 
-  // Convert 20-bit integer to array of booleans
-  const bitsToArray = (bits) => {
-    const arr = [];
-    for (let i = 0; i < 20; i++) {
-      arr.push((bits & (1 << i)) !== 0);
-    }
-    return arr;
-  };
+        // Load correct answers
+        const { data: answersData } = await supabaseClient
+          .from('correct_answers')
+          .select('*')
+          .eq('id', 1)
+          .single();
+        if (answersData) {
+          const ans = {};
+          for (let i = 0; i < 20; i++) {
+            if ((answersData.answered_mask & (1 << i)) !== 0) {
+              ans[i] = (answersData.answers_bits & (1 << i)) !== 0;
+            }
+          }
+          setCorrectAnswers(ans);
+        }
+      };
 
-  const handleLogin = async () => {
-    setLoading(true);
-    
-    // Call Supabase Edge Function to verify credentials
-    const { data, error } = await supabase.functions.invoke('verify-admin', {
-      body: { username: loginForm.username, password: loginForm.password }
-    });
+      const arrayToBits = (arr) => {
+        let bits = 0;
+        for (let i = 0; i < 20; i++) {
+          if (arr[i] === true) bits |= (1 << i);
+        }
+        return bits;
+      };
 
-    setLoading(false);
+      const bitsToArray = (bits) => {
+        const arr = [];
+        for (let i = 0; i < 20; i++) {
+          arr.push((bits & (1 << i)) !== 0);
+        }
+        return arr;
+      };
 
-    if (!error && data?.valid) {
-      // Sign in with Supabase Auth for session management
-      const { error: authError } = await supabase.auth.signInWithPassword({
-        email: `${loginForm.username}@admin.local`,
-        password: loginForm.password
-      });
-
-      if (!authError) {
-        setIsAdminLoggedIn(true);
-        setView('admin');
-        setLoginForm({ username: '', password: '' });
-      } else {
-        alert('Authentication error');
-      }
-    } else {
-      alert('Invalid credentials');
-    }
-  };
-
-  const handleLogout = async () => {
-    await supabase.auth.signOut();
-    setIsAdminLoggedIn(false);
-    setView('entry');
-  };
-
-  const handleAnswerChange = (index, value) => {
-    const newAnswers = [...formData.answers];
-    newAnswers[index] = value;
-    setFormData({ ...formData, answers: newAnswers });
-  };
-
-  const handleSubmit = async () => {
-    if (!formData.name || formData.answers.includes(null) || !formData.tiebreaker) {
-      alert('Please complete all fields');
-      return;
-    }
-    
-    setLoading(true);
-    
-    const { error } = await supabase
-      .from('entries')
-      .insert({
-        name: formData.name,
-        answers_bits: arrayToBits(formData.answers),
-        tiebreaker: parseInt(formData.tiebreaker)
-      });
-
-    setLoading(false);
-
-    if (!error) {
-      setFormData({ name: '', answers: Array(20).fill(null), tiebreaker: '' });
-      alert('Entry submitted successfully!');
-      loadEntries();
-    } else {
-      alert('Error submitting entry. Please try again.');
-    }
-  };
-
-  const handleCorrectAnswerChange = async (index, value) => {
-    const { data: current } = await supabase
-      .from('correct_answers')
-      .select('answers_bits, answered_mask')
-      .eq('id', 1)
-      .single();
-
-    if (current) {
-      let newAnswersBits = current.answers_bits;
-      let newAnsweredMask = current.answered_mask;
-
-      if (value === undefined) {
-        // Clear this answer
-        newAnsweredMask &= ~(1 << index);
-        newAnswersBits &= ~(1 << index);
-      } else {
-        // Set this answer
-        newAnsweredMask |= (1 << index);
-        if (value) {
-          newAnswersBits |= (1 << index);
+      const handleLogin = async () => {
+        setLoading(true);
+        const { data } = await supabaseClient.functions.invoke('verify-admin', {
+          body: { username: loginForm.username, password: loginForm.password }
+        });
+        setLoading(false);
+        if (data?.valid) {
+          setIsAdmin(true);
+          setView('admin');
         } else {
-          newAnswersBits &= ~(1 << index);
+          alert('Invalid credentials');
         }
-      }
+      };
 
-      const { error } = await supabase
-        .from('correct_answers')
-        .update({
-          answers_bits: newAnswersBits,
-          answered_mask: newAnsweredMask
-        })
-        .eq('id', 1);
+      const handleSubmit = async () => {
+        if (!formData.name || formData.answers.includes(null) || !formData.tiebreaker) {
+          alert('Please complete all fields');
+          return;
+        }
+        setLoading(true);
+        await supabaseClient.from('entries').insert({
+          name: formData.name,
+          answers_bits: arrayToBits(formData.answers),
+          tiebreaker: parseInt(formData.tiebreaker)
+        });
+        setLoading(false);
+        setFormData({ name: '', answers: Array(20).fill(null), tiebreaker: '' });
+        alert('Entry submitted!');
+        loadData();
+      };
 
-      if (!error) {
-        loadCorrectAnswers();
-      }
-    }
-  };
+      const calculateScore = (entry) => {
+        let score = 0;
+        entry.answers.forEach((ans, i) => {
+          if (correctAnswers[i] !== undefined && correctAnswers[i] === ans) score++;
+        });
+        return score;
+      };
 
-  const handleSaveQuestions = async () => {
-    setLoading(true);
-    
-    const { error } = await supabase
-      .from('questions')
-      .update({ questions })
-      .eq('id', 1);
-
-    setLoading(false);
-
-    if (!error) {
-      alert('Questions saved successfully!');
-      setEditingQuestions(false);
-    } else {
-      alert('Error saving questions');
-    }
-  };
-
-  const calculateScore = (entry) => {
-    let score = 0;
-    entry.answers.forEach((answer, index) => {
-      if (correctAnswers[index] !== undefined && correctAnswers[index] === answer) {
-        score++;
-      }
-    });
-    return score;
-  };
-
-  const calculatePercentages = (questionIndex) => {
-    if (entries.length === 0) return { yes: 0, no: 0 };
-    const yesCount = entries.filter(e => e.answers[questionIndex] === true).length;
-    const noCount = entries.filter(e => e.answers[questionIndex] === false).length;
-    return {
-      yes: Math.round((yesCount / entries.length) * 100),
-      no: Math.round((noCount / entries.length) * 100)
-    };
-  };
-
-  const getSortedEntries = () => {
-    return [...entries].sort((a, b) => calculateScore(b) - calculateScore(a));
-  };
-
-  // Entry Form View
-  if (view === 'entry') {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-900 via-purple-900 to-blue-800 p-4">
-        <div className="max-w-3xl mx-auto">
-          <div className="bg-white rounded-lg shadow-2xl p-6 mb-4">
-            <div className="flex items-center justify-between mb-6">
-              <div className="flex items-center gap-3">
-                <Trophy className="w-8 h-8 text-yellow-500" />
-                <h1 className="text-3xl font-bold text-gray-800">Super Bowl Teaser</h1>
+      // Entry Form
+      if (view === 'entry') {
+        return (
+          <div className="min-h-screen bg-gradient-to-br from-blue-900 via-purple-900 to-blue-800 p-4">
+            <div className="max-w-3xl mx-auto bg-white rounded-lg shadow-2xl p-6">
+              <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center gap-3">
+                  <Trophy />
+                  <h1 className="text-3xl font-bold">Super Bowl Teaser</h1>
+                </div>
+                <div className="flex gap-2">
+                  <button onClick={() => setView('scores')} className="px-4 py-2 bg-green-600 text-white rounded-lg">
+                    View Scores
+                  </button>
+                  <button onClick={() => setView('login')} className="px-4 py-2 bg-purple-600 text-white rounded-lg">
+                    Admin
+                  </button>
+                </div>
               </div>
-              <div className="flex gap-2">
-                <button
-                  onClick={() => setView('scores')}
-                  className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition"
-                >
-                  View Scores
-                </button>
-                <button
-                  onClick={() => setView('login')}
-                  className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition"
-                >
-                  Admin
-                </button>
-              </div>
-            </div>
 
-            <div>
-              <div className="mb-6">
-                <label className="block text-gray-700 font-semibold mb-2">Your Name</label>
+              <div className="mb-4">
+                <label className="block font-semibold mb-2">Your Name</label>
                 <input
                   type="text"
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-4 py-2 border rounded-lg"
                   placeholder="Enter your name"
                 />
               </div>
 
-              <div className="mb-6">
-                <h2 className="text-xl font-bold text-gray-800 mb-4">Answer YES or NO to each question:</h2>
-                <div className="space-y-3">
-                  {questions.map((question, index) => (
-                    <div key={index} className="bg-gray-50 p-4 rounded-lg">
-                      <p className="text-gray-700 mb-3">
-                        <span className="font-semibold">{index + 1}.</span> {question}
-                      </p>
-                      <div className="flex gap-4">
-                        <label className="flex items-center cursor-pointer">
-                          <input
-                            type="radio"
-                            name={`q${index}`}
-                            checked={formData.answers[index] === true}
-                            onChange={() => handleAnswerChange(index, true)}
-                            className="w-4 h-4 text-green-600"
-                          />
-                          <span className="ml-2 text-gray-700">YES</span>
-                        </label>
-                        <label className="flex items-center cursor-pointer">
-                          <input
-                            type="radio"
-                            name={`q${index}`}
-                            checked={formData.answers[index] === false}
-                            onChange={() => handleAnswerChange(index, false)}
-                            className="w-4 h-4 text-red-600"
-                          />
-                          <span className="ml-2 text-gray-700">NO</span>
-                        </label>
-                      </div>
+              <h2 className="text-xl font-bold mb-4">Answer YES or NO:</h2>
+              <div className="space-y-3 mb-6">
+                {questions.map((q, i) => (
+                  <div key={i} className="bg-gray-50 p-4 rounded-lg">
+                    <p className="mb-2"><strong>{i + 1}.</strong> {q}</p>
+                    <div className="flex gap-4">
+                      <label className="flex items-center cursor-pointer">
+                        <input
+                          type="radio"
+                          checked={formData.answers[i] === true}
+                          onChange={() => {
+                            const newAnswers = [...formData.answers];
+                            newAnswers[i] = true;
+                            setFormData({ ...formData, answers: newAnswers });
+                          }}
+                          className="w-4 h-4"
+                        />
+                        <span className="ml-2">YES</span>
+                      </label>
+                      <label className="flex items-center cursor-pointer">
+                        <input
+                          type="radio"
+                          checked={formData.answers[i] === false}
+                          onChange={() => {
+                            const newAnswers = [...formData.answers];
+                            newAnswers[i] = false;
+                            setFormData({ ...formData, answers: newAnswers });
+                          }}
+                          className="w-4 h-4"
+                        />
+                        <span className="ml-2">NO</span>
+                      </label>
                     </div>
-                  ))}
-                </div>
+                  </div>
+                ))}
               </div>
 
               <div className="mb-6">
-                <label className="block text-gray-700 font-semibold mb-2">
-                  Tiebreaker: Total Points Scored in the Game
-                </label>
+                <label className="block font-semibold mb-2">Tiebreaker: Total Points</label>
                 <input
                   type="number"
                   value={formData.tiebreaker}
                   onChange={(e) => setFormData({ ...formData, tiebreaker: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  placeholder="Enter total points (e.g., 51)"
-                  min="0"
+                  className="w-full px-4 py-2 border rounded-lg"
+                  placeholder="e.g., 51"
                 />
               </div>
 
               <button
                 onClick={handleSubmit}
                 disabled={loading}
-                className="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white py-3 rounded-lg font-semibold hover:from-blue-700 hover:to-purple-700 transition shadow-lg disabled:opacity-50 flex items-center justify-center gap-2"
+                className="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white py-3 rounded-lg font-semibold disabled:opacity-50"
               >
-                {loading ? (
-                  <>
-                    <RefreshCw className="w-5 h-5 animate-spin" />
-                    Submitting...
-                  </>
-                ) : (
-                  'Submit Entry'
-                )}
+                {loading ? 'Submitting...' : 'Submit Entry'}
               </button>
-            </div>
 
-            <div className="mt-6 text-center text-gray-600">
-              <p className="flex items-center justify-center gap-2">
-                <Users className="w-5 h-5" />
-                {entries.length} {entries.length === 1 ? 'entry' : 'entries'} submitted
-              </p>
+              <div className="mt-4 text-center text-gray-600 flex items-center justify-center gap-2">
+                <Users />
+                {entries.length} entries submitted
+              </div>
             </div>
           </div>
-        </div>
-      </div>
-    );
-  }
+        );
+      }
 
-  // Login View
-  if (view === 'login') {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-900 via-purple-900 to-blue-800 p-4 flex items-center justify-center">
-        <div className="bg-white rounded-lg shadow-2xl p-8 w-full max-w-md">
-          <div className="flex items-center gap-3 mb-6">
-            <Lock className="w-8 h-8 text-purple-600" />
-            <h1 className="text-2xl font-bold text-gray-800">Admin Login</h1>
-          </div>
-          
-          <div className="space-y-4">
-            <div>
-              <label className="block text-gray-700 font-semibold mb-2">Username</label>
-              <input
-                type="text"
-                value={loginForm.username}
-                onChange={(e) => setLoginForm({ ...loginForm, username: e.target.value })}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                placeholder="Enter username"
-              />
-            </div>
-            
-            <div>
-              <label className="block text-gray-700 font-semibold mb-2">Password</label>
-              <div className="relative">
-                <input
-                  type={showPassword ? 'text' : 'password'}
-                  value={loginForm.password}
-                  onChange={(e) => setLoginForm({ ...loginForm, password: e.target.value })}
-                  onKeyPress={(e) => e.key === 'Enter' && handleLogin()}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                  placeholder="Enter password"
-                />
-                <button
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-2.5 text-gray-500 hover:text-gray-700"
-                >
-                  {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-                </button>
+      // Login View
+      if (view === 'login') {
+        return (
+          <div className="min-h-screen bg-gradient-to-br from-blue-900 via-purple-900 to-blue-800 p-4 flex items-center justify-center">
+            <div className="bg-white rounded-lg shadow-2xl p-8 w-full max-w-md">
+              <div className="flex items-center gap-3 mb-6">
+                <Lock />
+                <h1 className="text-2xl font-bold">Admin Login</h1>
               </div>
-            </div>
-            
-            <button
-              onClick={handleLogin}
-              disabled={loading}
-              className="w-full bg-purple-600 text-white py-3 rounded-lg font-semibold hover:bg-purple-700 transition disabled:opacity-50 flex items-center justify-center gap-2"
-            >
-              {loading ? (
-                <>
-                  <RefreshCw className="w-5 h-5 animate-spin" />
-                  Logging in...
-                </>
-              ) : (
-                'Login'
-              )}
-            </button>
-            
-            <button
-              onClick={() => setView('entry')}
-              className="w-full bg-gray-200 text-gray-700 py-2 rounded-lg hover:bg-gray-300 transition"
-            >
-              Back to Entry Form
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // Admin View
-  if (view === 'admin' && isAdminLoggedIn) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-900 via-purple-900 to-blue-800 p-4">
-        <div className="max-w-6xl mx-auto">
-          <div className="bg-white rounded-lg shadow-2xl p-6">
-            <div className="flex items-center justify-between mb-6">
-              <div className="flex items-center gap-3">
-                <Award className="w-8 h-8 text-purple-600" />
-                <h1 className="text-3xl font-bold text-gray-800">Admin Panel</h1>
-              </div>
-              <div className="flex gap-2">
-                <button
-                  onClick={() => setEditingQuestions(!editingQuestions)}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition flex items-center gap-2"
-                >
-                  <Settings className="w-4 h-4" />
-                  {editingQuestions ? 'Done Editing' : 'Edit Questions'}
-                </button>
-                <button
-                  onClick={handleLogout}
-                  className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition flex items-center gap-2"
-                >
-                  <LogOut className="w-4 h-4" />
-                  Logout
-                </button>
-              </div>
-            </div>
-
-            {editingQuestions ? (
-              <div className="space-y-3 mb-6">
-                <h2 className="text-xl font-bold text-gray-800 mb-4">Edit Questions</h2>
-                {questions.map((question, index) => (
-                  <div key={index} className="flex gap-2">
-                    <span className="text-gray-600 font-semibold mt-2">{index + 1}.</span>
-                    <input
-                      type="text"
-                      value={question}
-                      onChange={(e) => {
-                        const newQuestions = [...questions];
-                        newQuestions[index] = e.target.value;
-                        setQuestions(newQuestions);
-                      }}
-                      className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                    />
-                  </div>
-                ))}
-                <button
-                  onClick={handleSaveQuestions}
-                  disabled={loading}
-                  className="mt-4 px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition disabled:opacity-50 flex items-center gap-2"
-                >
-                  {loading ? (
-                    <>
-                      <RefreshCw className="w-4 h-4 animate-spin" />
-                      Saving...
-                    </>
-                  ) : (
-                    'Save Questions'
-                  )}
-                </button>
-              </div>
-            ) : (
-              <>
-                <h2 className="text-xl font-bold text-gray-800 mb-4">Enter Correct Answers</h2>
-                <div className="space-y-3 mb-8">
-                  {questions.map((question, index) => (
-                    <div key={index} className="bg-gray-50 p-4 rounded-lg">
-                      <p className="text-gray-700 mb-3">
-                        <span className="font-semibold">{index + 1}.</span> {question}
-                      </p>
-                      <div className="flex gap-4">
-                        <label className="flex items-center cursor-pointer">
-                          <input
-                            type="radio"
-                            name={`correct${index}`}
-                            checked={correctAnswers[index] === true}
-                            onChange={() => handleCorrectAnswerChange(index, true)}
-                            className="w-4 h-4 text-green-600"
-                          />
-                          <span className="ml-2 text-gray-700 font-semibold">YES</span>
-                        </label>
-                        <label className="flex items-center cursor-pointer">
-                          <input
-                            type="radio"
-                            name={`correct${index}`}
-                            checked={correctAnswers[index] === false}
-                            onChange={() => handleCorrectAnswerChange(index, false)}
-                            className="w-4 h-4 text-red-600"
-                          />
-                          <span className="ml-2 text-gray-700 font-semibold">NO</span>
-                        </label>
-                        <label className="flex items-center cursor-pointer">
-                          <input
-                            type="radio"
-                            name={`correct${index}`}
-                            checked={correctAnswers[index] === undefined}
-                            onChange={() => handleCorrectAnswerChange(index, undefined)}
-                            className="w-4 h-4 text-gray-400"
-                          />
-                          <span className="ml-2 text-gray-500">Not Yet Answered</span>
-                        </label>
-                      </div>
-                    </div>
-                  ))}
+              <div className="space-y-4">
+                <div>
+                  <label className="block font-semibold mb-2">Username</label>
+                  <input
+                    type="text"
+                    value={loginForm.username}
+                    onChange={(e) => setLoginForm({ ...loginForm, username: e.target.value })}
+                    className="w-full px-4 py-2 border rounded-lg"
+                  />
                 </div>
-
-                <h2 className="text-xl font-bold text-gray-800 mb-4">All Entries</h2>
-                {entries.length === 0 ? (
-                  <p className="text-gray-600 text-center py-8">No entries yet</p>
-                ) : (
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-sm">
-                      <thead>
-                        <tr className="bg-gray-100">
-                          <th className="px-3 py-2 text-left">Name</th>
-                          <th className="px-3 py-2 text-left">Score</th>
-                          <th className="px-3 py-2 text-left">Answers</th>
-                          <th className="px-3 py-2 text-left">Tiebreaker</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {getSortedEntries().map((entry) => (
-                          <tr key={entry.id} className="border-b hover:bg-gray-50">
-                            <td className="px-3 py-3 font-semibold">{entry.name}</td>
-                            <td className="px-3 py-3 text-lg font-bold text-purple-600">
-                              {calculateScore(entry)}
-                            </td>
-                            <td className="px-3 py-3">
-                              <div className="flex gap-1 flex-wrap">
-                                {entry.answers.map((ans, i) => (
-                                  <span
-                                    key={i}
-                                    className={`px-1.5 py-0.5 rounded text-xs font-semibold ${
-                                      correctAnswers[i] !== undefined && correctAnswers[i] === ans
-                                        ? 'bg-green-500 text-white'
-                                        : ans
-                                        ? 'bg-green-100 text-green-800'
-                                        : 'bg-red-100 text-red-800'
-                                    }`}
-                                  >
-                                    {i + 1}:{ans ? 'Y' : 'N'}
-                                  </span>
-                                ))}
-                              </div>
-                            </td>
-                            <td className="px-3 py-3">{entry.tiebreaker}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
+                <div>
+                  <label className="block font-semibold mb-2">Password</label>
+                  <div className="relative">
+                    <input
+                      type={showPassword ? 'text' : 'password'}
+                      value={loginForm.password}
+                      onChange={(e) => setLoginForm({ ...loginForm, password: e.target.value })}
+                      onKeyPress={(e) => e.key === 'Enter' && handleLogin()}
+                      className="w-full px-4 py-2 border rounded-lg"
+                    />
+                    <button
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3 top-2.5"
+                    >
+                      {showPassword ? <EyeOff /> : <Eye />}
+                    </button>
                   </div>
-                )}
-              </>
-            )}
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // Scores View (Public)
-  if (view === 'scores') {
-    const sortedEntries = getSortedEntries();
-    
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-900 via-purple-900 to-blue-800 p-4">
-        <div className="max-w-7xl mx-auto">
-          <div className="bg-white rounded-lg shadow-2xl p-6">
-            <div className="flex items-center justify-between mb-6">
-              <div className="flex items-center gap-3">
-                <Trophy className="w-8 h-8 text-yellow-500" />
-                <h1 className="text-3xl font-bold text-gray-800">Live Scoreboard</h1>
+                </div>
+                <button
+                  onClick={handleLogin}
+                  disabled={loading}
+                  className="w-full bg-purple-600 text-white py-3 rounded-lg font-semibold"
+                >
+                  {loading ? 'Logging in...' : 'Login'}
+                </button>
+                <button
+                  onClick={() => setView('entry')}
+                  className="w-full bg-gray-200 py-2 rounded-lg"
+                >
+                  Back
+                </button>
               </div>
-              <button
-                onClick={() => setView('entry')}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
-              >
-                Back to Entry Form
-              </button>
             </div>
+          </div>
+        );
+      }
 
-            {entries.length === 0 ? (
-              <p className="text-gray-600 text-center py-8">No entries yet</p>
-            ) : (
+      // Scores View
+      if (view === 'scores') {
+        const sorted = [...entries].sort((a, b) => calculateScore(b) - calculateScore(a));
+        return (
+          <div className="min-h-screen bg-gradient-to-br from-blue-900 via-purple-900 to-blue-800 p-4">
+            <div className="max-w-7xl mx-auto bg-white rounded-lg shadow-2xl p-6">
+              <div className="flex justify-between mb-6">
+                <h1 className="text-3xl font-bold">Live Scoreboard</h1>
+                <button onClick={() => setView('entry')} className="px-4 py-2 bg-blue-600 text-white rounded-lg">
+                  Back
+                </button>
+              </div>
               <div className="overflow-x-auto">
                 <table className="w-full text-xs">
                   <thead>
                     <tr className="bg-gray-100">
-                      <th className="px-2 py-2 text-left sticky left-0 bg-gray-100 z-10">Rank</th>
-                      <th className="px-2 py-2 text-left sticky left-12 bg-gray-100 z-10">Name</th>
-                      <th className="px-2 py-2 text-center sticky left-32 bg-gray-100 z-10">Score</th>
+                      <th className="px-2 py-2">Rank</th>
+                      <th className="px-2 py-2">Name</th>
+                      <th className="px-2 py-2">Score</th>
                       {questions.map((_, i) => (
-                        <th key={i} className="px-1 py-2 text-center">
-                          <div className="font-bold">{i + 1}</div>
-                          <div className="text-xs text-gray-500">
-                            {calculatePercentages(i).yes}% Y
-                          </div>
-                        </th>
+                        <th key={i} className="px-1 py-2">{i + 1}</th>
                       ))}
-                      <th className="px-2 py-2 text-center">TB</th>
+                      <th className="px-2 py-2">TB</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {sortedEntries.map((entry, rank) => (
-                      <tr key={entry.id} className="border-b hover:bg-gray-50">
-                        <td className="px-2 py-2 font-bold sticky left-0 bg-white z-10">
-                          {rank + 1}
-                        </td>
-                        <td className="px-2 py-2 font-semibold sticky left-12 bg-white z-10">
-                          {entry.name}
-                        </td>
-                        <td className="px-2 py-2 text-center font-bold text-lg text-purple-600 sticky left-32 bg-white z-10">
+                    {sorted.map((entry, rank) => (
+                      <tr key={entry.id} className="border-b">
+                        <td className="px-2 py-2 font-bold">{rank + 1}</td>
+                        <td className="px-2 py-2 font-semibold">{entry.name}</td>
+                        <td className="px-2 py-2 text-center font-bold text-purple-600">
                           {calculateScore(entry)}
                         </td>
                         {entry.answers.map((ans, i) => (
@@ -678,20 +340,21 @@ export default function SuperBowlTeaser() {
                             {ans ? 'Y' : 'N'}
                           </td>
                         ))}
-                        <td className="px-2 py-2 text-center text-gray-600">
-                          {entry.tiebreaker}
-                        </td>
+                        <td className="px-2 py-2 text-center">{entry.tiebreaker}</td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
               </div>
-            )}
+            </div>
           </div>
-        </div>
-      </div>
-    );
-  }
+        );
+      }
 
-  return null;
-}
+      return null;
+    }
+
+    ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+  </script>
+</body>
+</html>
