@@ -45,6 +45,7 @@
       const [showPassword, setShowPassword] = useState(false);
       const [loading, setLoading] = useState(false);
       const [editingQuestions, setEditingQuestions] = useState(false);
+      const [entriesOpen, setEntriesOpen] = useState(true);
       const [formData, setFormData] = useState({
         name: '',
         answers: Array(20).fill(null),
@@ -90,6 +91,7 @@
             }
           }
           setCorrectAnswers(ans);
+          setEntriesOpen(answersData.entries_open !== false);
         }
       };
 
@@ -175,6 +177,19 @@
           loadData();
         }
       };
+
+        const handleToggleEntries = async () => {
+          const newState = !entriesOpen;
+          const { error } = await supabaseClient
+            .from('correct_answers')
+            .update({ entries_open: newState })
+            .eq('id', 1);
+          
+          if (!error) {
+            setEntriesOpen(newState);
+            alert(newState ? 'Entries are now OPEN' : 'Entries are now CLOSED');
+          }
+        };
 
       const handleSaveQuestions = async () => {
         setLoading(true);
@@ -282,13 +297,20 @@
                 />
               </div>
 
-				<button
-	        	  onClick={handleSubmit}
-				  disabled={loading || !formData.name || formData.answers.includes(null) || !formData.tiebreaker}
-				  className="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white py-3 rounded-lg font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
-				>
-				  {loading ? 'Submitting...' : 'Submit Entry'}
-				</button>
+                {!entriesOpen ? (
+                  <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg text-center">
+                    <p className="font-bold">Entries are now closed</p>
+                    <p className="text-sm">Thank you for your interest!</p>
+                  </div>
+                ) : (
+                  <button
+                    onClick={handleSubmit}
+                    disabled={loading || !formData.name || formData.answers.includes(null) || !formData.tiebreaker}
+                    className="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white py-3 rounded-lg font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {loading ? 'Submitting...' : 'Submit Entry'}
+                  </button>
+                )}
 
               <div className="mt-4 text-center text-gray-600 flex items-center justify-center gap-2">
                 <Users />
@@ -366,6 +388,13 @@
                   <h1 className="text-3xl font-bold">Admin Panel</h1>
                 </div>
                 <div className="flex gap-2">
+                  <button
+                      onClick={handleToggleEntries}
+                      className={`px-4 py-2 ${entriesOpen ? 'bg-red-600 hover:bg-red-700' : 'bg-green-600 hover:bg-green-700'} text-white rounded-lg font-semibold`}
+                    >
+                      {entriesOpen ? 'Close Entries' : 'Open Entries'}
+                    </button>
+                  
                   <button
                     onClick={() => setEditingQuestions(!editingQuestions)}
                     className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2"
