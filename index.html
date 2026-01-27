@@ -281,13 +281,13 @@
                 />
               </div>
 
-              <button
-                onClick={handleSubmit}
-                disabled={loading}
-                className="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white py-3 rounded-lg font-semibold disabled:opacity-50"
-              >
-                {loading ? 'Submitting...' : 'Submit Entry'}
-              </button>
+				<button
+	        	  onClick={handleSubmit}
+				  disabled={loading || !formData.name || formData.answers.includes(null) || !formData.tiebreaker}
+				  className="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white py-3 rounded-lg font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+				>
+				  {loading ? 'Submitting...' : 'Submit Entry'}
+				</button>
 
               <div className="mt-4 text-center text-gray-600 flex items-center justify-center gap-2">
                 <Users />
