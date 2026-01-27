@@ -46,6 +46,7 @@
       const [loading, setLoading] = useState(false);
       const [editingQuestions, setEditingQuestions] = useState(false);
       const [entriesOpen, setEntriesOpen] = useState(true);
+      const [updatingPayment, setUpdatingPayment] = useState(null);
       const [formData, setFormData] = useState({
         name: '',
         answers: Array(20).fill(null),
@@ -178,6 +179,18 @@
         }
       };
 
+        const handleTogglePayment = async (entryId, currentStatus) => {
+          setUpdatingPayment(entryId);
+          const { error } = await supabaseClient
+            .from('entries')
+            .update({ paid: !currentStatus })
+            .eq('id', entryId);
+          
+          if (!error) {
+            loadData();
+          }
+          setUpdatingPayment(null);
+        };
         const handleToggleEntries = async () => {
           const newState = !entriesOpen;
           const { error } = await supabaseClient
@@ -481,12 +494,23 @@
                     ))}
                   </div>
 
-                  <h2 className="text-xl font-bold mb-4">All Entries ({entries.length})</h2>
+                    <div className="flex items-center justify-between mb-4">
+                      <h2 className="text-xl font-bold">All Entries ({entries.length})</h2>
+                      <div className="text-sm">
+                        <span className="font-semibold text-green-600">
+                          {entries.filter(e => e.paid).length} paid
+                        </span>
+                        {' / '}
+                        <span className="font-semibold text-gray-600">
+                          {entries.filter(e => !e.paid).length} unpaid
+                        </span>
+                      </div>
+                    </div>
                   <div className="overflow-x-auto">
                     <table className="w-full text-sm">
                       <thead>
                         <tr className="bg-gray-100">
-                          <th className="px-3 py-2 text-left">Name</th>
+                          <th className="px-3 py-2 text-left">Name</th>                            <th className="px-3 py-2 text-left">Paid</th>
                           <th className="px-3 py-2 text-left">Score</th>
                           <th className="px-3 py-2 text-left">Answers</th>
                           <th className="px-3 py-2 text-left">Tiebreaker</th>
@@ -494,11 +518,25 @@
                       </thead>
                       <tbody>
                         {[...entries].sort((a, b) => calculateScore(b) - calculateScore(a)).map((entry) => (
-                          <tr key={entry.id} className="border-b hover:bg-gray-50">
-                            <td className="px-3 py-3 font-semibold">{entry.name}</td>
-                            <td className="px-3 py-3 text-lg font-bold text-purple-600">
-                              {calculateScore(entry)}
-                            </td>
+                        <tr key={entry.id} className="border-b hover:bg-gray-50">
+                          <td className="px-3 py-3 font-semibold">{entry.name}</td>
+                          <td className="px-3 py-3">
+                            <button
+                              onClick={() => handleTogglePayment(entry.id, entry.paid)}
+                              disabled={updatingPayment === entry.id}
+                              className={`px-3 py-1 rounded text-sm font-semibold ${
+                                entry.paid 
+                                  ? 'bg-green-500 text-white hover:bg-green-600' 
+                                  : 'bg-gray-300 text-gray-700 hover:bg-gray-400'
+                              } disabled:opacity-50`}
+                            >
+                              {updatingPayment === entry.id ? '...' : entry.paid ? 'PAID' : 'Unpaid'}
+                            </button>
+                          </td>
+                          <td className="px-3 py-3 text-lg font-bold text-purple-600">
+                            {calculateScore(entry)}
+                          </td> 
+                         
                             <td className="px-3 py-3">
                               <div className="flex gap-1 flex-wrap">
                                 {entry.answers.map((ans, i) => (
