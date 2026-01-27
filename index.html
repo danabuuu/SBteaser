@@ -35,6 +35,7 @@
     const Settings = () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>;
 
     function App() {
+      const [entriesOpen, setEntriesOpen] = useState(true);
       const [entries, setEntries] = useState([]);
       const [questions, setQuestions] = useState([]);
       const [correctAnswers, setCorrectAnswers] = useState({});
@@ -89,6 +90,7 @@
             }
           }
           setCorrectAnswers(ans);
+          setEntriesOpen(answersData.entries_open !== false);
         }
       };
 
@@ -187,6 +189,19 @@
           setEditingQuestions(false);
         }
       };
+      
+      const handleToggleEntries = async () => {
+		  const newState = !entriesOpen;
+		  const { error } = await supabaseClient
+		    .from('correct_answers')
+		    .update({ entries_open: newState })
+		    .eq('id', 1);
+		  
+		  if (!error) {
+		    setEntriesOpen(newState);
+		    alert(newState ? 'Entries are now OPEN' : 'Entries are now CLOSED');
+		  }
+		};
 
       const calculateScore = (entry) => {
         let score = 0;
@@ -280,15 +295,22 @@
                   placeholder="e.g., 51"
                 />
               </div>
-
-				<button
-	        	  onClick={handleSubmit}
-				  disabled={loading || !formData.name || formData.answers.includes(null) || !formData.tiebreaker}
-				  className="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white py-3 rounded-lg font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
-				>
-				  {loading ? 'Submitting...' : 'Submit Entry'}
-				</button>
-
+              
+			{!entriesOpen ? (
+			  <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg text-center">
+			    <p className="font-bold">Entries are now closed</p>
+			    <p className="text-sm">Thank you for your interest!</p>
+			  </div>
+			) : (
+			  <button
+			    onClick={handleSubmit}
+			    disabled={loading || !formData.name || formData.answers.includes(null) || !formData.tiebreaker}
+			    className="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white py-3 rounded-lg font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+			  >
+			    {loading ? 'Submitting...' : 'Submit Entry'}
+			  </button>
+			)}
+			
               <div className="mt-4 text-center text-gray-600 flex items-center justify-center gap-2">
                 <Users />
                 {entries.length} entries submitted
@@ -358,32 +380,37 @@
       if (view === 'admin' && isAdmin) {
         return (
           <div className="min-h-screen bg-gradient-to-br from-blue-900 via-purple-900 to-blue-800 p-4">
-            <div className="max-w-6xl mx-auto bg-white rounded-lg shadow-2xl p-6">
-              <div className="flex items-center justify-between mb-6">
-                <div className="flex items-center gap-3">
-                  <Award />
-                  <h1 className="text-3xl font-bold">Admin Panel</h1>
-                </div>
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => setEditingQuestions(!editingQuestions)}
-                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2"
-                  >
-                    <Settings />
-                    {editingQuestions ? 'Done Editing' : 'Edit Questions'}
-                  </button>
-                  <button
-                    onClick={() => {
-                      setIsAdmin(false);
-                      setView('entry');
-                    }}
-                    className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 flex items-center gap-2"
-                  >
-                    <LogOut />
-                    Logout
-                  </button>
-                </div>
-              </div>
+			<div className="flex items-center justify-between mb-6">
+			  <div className="flex items-center gap-3">
+			    <Award />
+			    <h1 className="text-3xl font-bold">Admin Panel</h1>
+			  </div>
+			  <div className="flex gap-2">
+			    <button
+			      onClick={handleToggleEntries}
+			      className={`px-4 py-2 ${entriesOpen ? 'bg-red-600 hover:bg-red-700' : 'bg-green-600 hover:bg-green-700'} text-white rounded-lg font-semibold`}
+			    >
+			      {entriesOpen ? 'Close Entries' : 'Open Entries'}
+			    </button>
+			    <button
+			      onClick={() => setEditingQuestions(!editingQuestions)}
+			      className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2"
+			    >
+			      <Settings />
+			      {editingQuestions ? 'Done Editing' : 'Edit Questions'}
+			    </button>
+			    <button
+			      onClick={() => {
+			        setIsAdmin(false);
+			        setView('entry');
+			      }}
+			      className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 flex items-center gap-2"
+			    >
+			      <LogOut />
+			      Logout
+			    </button>
+			  </div>
+			</div>
 
               {editingQuestions ? (
                 <div className="space-y-3 mb-6">
