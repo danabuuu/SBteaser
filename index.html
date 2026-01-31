@@ -48,7 +48,9 @@
       const [entriesOpen, setEntriesOpen] = useState(true);
       const [updatingPayment, setUpdatingPayment] = useState(null);
       const [formData, setFormData] = useState({
-        name: '',
+          name: '',
+          email: '',
+          mobile: '',
         answers: Array(20).fill(null),
         tiebreaker: ''
       });
@@ -135,11 +137,13 @@
         setLoading(true);
         await supabaseClient.from('entries').insert({
           name: formData.name,
+          email: formData.email,
+          mobile: formData.mobile,
           answers_bits: arrayToBits(formData.answers),
           tiebreaker: parseInt(formData.tiebreaker)
         });
         setLoading(false);
-        setFormData({ name: '', answers: Array(20).fill(null), tiebreaker: '' });
+        setFormData({ name: '', email: '', mobile: '', answers: Array(20).fill(null), tiebreaker: '' });
         alert('Entry submitted!');
         loadData();
       };
@@ -251,16 +255,38 @@
                 </div>
               </div>
 
-              <div className="mb-4">
-                <label className="block font-semibold mb-2">Your Name</label>
-                <input
-                  type="text"
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  className="w-full px-4 py-2 border rounded-lg"
-                  placeholder="Enter your name"
-                />
-              </div>
+                <div className="mb-4">
+                  <label className="block font-semibold mb-2">Your Name</label>
+                  <input
+                    type="text"
+                    value={formData.name}
+                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                    className="w-full px-4 py-2 border rounded-lg"
+                    placeholder="Enter your name"
+                  />
+                </div>
+                
+                <div className="mb-4">
+                  <label className="block font-semibold mb-2">Email</label>
+                  <input
+                    type="email"
+                    value={formData.email}
+                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                    className="w-full px-4 py-2 border rounded-lg"
+                    placeholder="your@email.com"
+                  />
+                </div>
+                
+                <div className="mb-4">
+                  <label className="block font-semibold mb-2">Mobile Number</label>
+                  <input
+                    type="tel"
+                    value={formData.mobile}
+                    onChange={(e) => setFormData({ ...formData, mobile: e.target.value })}
+                    className="w-full px-4 py-2 border rounded-lg"
+                    placeholder="(555) 123-4567"
+                  />
+                </div>
 
               <h2 className="text-xl font-bold mb-4">Answer YES or NO:</h2>
               <div className="space-y-3 mb-6">
@@ -318,7 +344,7 @@
                 ) : (
                   <button
                     onClick={handleSubmit}
-                    disabled={loading || !formData.name || formData.answers.includes(null) || !formData.tiebreaker}
+                    disabled={loading || !formData.name || !formData.email || !formData.mobile || formData.answers.includes(null) || !formData.tiebreaker}
                     className="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white py-3 rounded-lg font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {loading ? 'Submitting...' : 'Submit Entry'}
@@ -510,7 +536,10 @@
                     <table className="w-full text-sm">
                       <thead>
                         <tr className="bg-gray-100">
-                          <th className="px-3 py-2 text-left">Name</th>                            <th className="px-3 py-2 text-left">Paid</th>
+                          <th className="px-3 py-2 text-left">Name</th>
+                          <th className="px-3 py-2 text-left">Email</th>
+                          <th className="px-3 py-2 text-left">Mobile</th>
+                          <th className="px-3 py-2 text-left">Paid</th>
                           <th className="px-3 py-2 text-left">Score</th>
                           <th className="px-3 py-2 text-left">Answers</th>
                           <th className="px-3 py-2 text-left">Tiebreaker</th>
@@ -520,6 +549,8 @@
                         {[...entries].sort((a, b) => calculateScore(b) - calculateScore(a)).map((entry) => (
                         <tr key={entry.id} className="border-b hover:bg-gray-50">
                           <td className="px-3 py-3 font-semibold">{entry.name}</td>
+                          <td className="px-3 py-3 text-sm">{entry.email}</td>
+                          <td className="px-3 py-3 text-sm">{entry.mobile}</td>
                           <td className="px-3 py-3">
                             <button
                               onClick={() => handleTogglePayment(entry.id, entry.paid)}
