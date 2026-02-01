@@ -55,38 +55,22 @@
         tiebreaker: ''
       });
 
-    useEffect(() => {
-      loadData();
-      
-      // Subscribe to real-time changes
-      const entriesChannel = supabaseClient
-        .channel('entries-changes')
-        .on('postgres_changes', { 
-          event: '*', 
-          schema: 'public', 
-          table: 'entries' 
-        }, () => {
+        useEffect(() => {
           loadData();
-        })
-        .subscribe();
-    
-      const answersChannel = supabaseClient
-        .channel('answers-changes')
-        .on('postgres_changes', { 
-          event: '*', 
-          schema: 'public', 
-          table: 'correct_answers' 
-        }, () => {
-          loadData();
-        })
-        .subscribe();
-    
-      // Cleanup subscriptions on unmount
-      return () => {
-        supabaseClient.removeChannel(entriesChannel);
-        supabaseClient.removeChannel(answersChannel);
-      };
-    }, []);
+          
+          // Auto-refresh every 5 seconds when viewing scores
+          let interval;
+          if (view === 'scores') {
+            interval = setInterval(() => {
+              loadData();
+            }, 5000); // Refresh every 5 seconds
+          }
+        
+          // Cleanup interval on unmount or view change
+          return () => {
+            if (interval) clearInterval(interval);
+          };
+        }, [view]);
 
       const loadData = async () => {
         // Load entries
