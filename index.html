@@ -39,7 +39,7 @@
       const [entries, setEntries] = useState([]);
       const [questions, setQuestions] = useState([]);
       const [correctAnswers, setCorrectAnswers] = useState({});
-      const [view, setView] = useState('entry');
+
       const [isAdmin, setIsAdmin] = useState(false);
       const [loginForm, setLoginForm] = useState({ username: '', password: '' });
       const [showPassword, setShowPassword] = useState(false);
@@ -47,6 +47,26 @@
       const [editingQuestions, setEditingQuestions] = useState(false);
       const [entriesOpen, setEntriesOpen] = useState(true);
       const [updatingPayment, setUpdatingPayment] = useState(null);
+        // Get initial view from URL query string (e.g., ?view=scores)
+        const getInitialView = () => {
+          const params = new URLSearchParams(window.location.search);
+          const viewParam = params.get('view');
+          return viewParam || 'entry';
+        };  
+      const [view, setView] = useState(getInitialView());
+      
+        // Update URL when view changes
+        useEffect(() => {
+          const params = new URLSearchParams(window.location.search);
+          if (view !== 'entry') {
+            params.set('view', view);
+          } else {
+            params.delete('view');
+          }
+          const newUrl = params.toString() ? `?${params.toString()}` : window.location.pathname;
+          window.history.replaceState({}, '', newUrl);
+        }, [view]);
+              
       const [formData, setFormData] = useState({
           name: '',
           email: '',
