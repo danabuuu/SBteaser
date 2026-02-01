@@ -55,9 +55,38 @@
         tiebreaker: ''
       });
 
-      useEffect(() => {
-        loadData();
-      }, []);
+    useEffect(() => {
+      loadData();
+      
+      // Subscribe to real-time changes
+      const entriesChannel = supabaseClient
+        .channel('entries-changes')
+        .on('postgres_changes', { 
+          event: '*', 
+          schema: 'public', 
+          table: 'entries' 
+        }, () => {
+          loadData();
+        })
+        .subscribe();
+    
+      const answersChannel = supabaseClient
+        .channel('answers-changes')
+        .on('postgres_changes', { 
+          event: '*', 
+          schema: 'public', 
+          table: 'correct_answers' 
+        }, () => {
+          loadData();
+        })
+        .subscribe();
+    
+      // Cleanup subscriptions on unmount
+      return () => {
+        supabaseClient.removeChannel(entriesChannel);
+        supabaseClient.removeChannel(answersChannel);
+      };
+    }, []);
 
       const loadData = async () => {
         // Load entries
