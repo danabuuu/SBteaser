@@ -215,7 +215,44 @@
           loadData();
         }
       };
-
+        const exportToCSV = () => {
+          // Create CSV header
+          const headers = ['Name'];
+          for (let i = 1; i <= 20; i++) {
+            headers.push(`Q${i}`);
+          }
+          headers.push('Tiebreaker', 'Unpaid', 'Email', 'Mobile');
+          
+          // Create CSV rows
+          const rows = entries.map(entry => {
+            const row = [entry.name];
+            // Add answers (Y/N)
+            entry.answers.forEach(ans => row.push(ans ? 'Y' : 'N'));
+            // Add tiebreaker
+            row.push(entry.tiebreaker);
+            // Add unpaid marker (X if unpaid, blank if paid)
+            row.push(entry.paid ? '' : 'X');
+            // Add contact info
+            row.push(entry.email || '', entry.mobile || '');
+            return row;
+          });
+          
+          // Combine header and rows
+          const csvContent = [headers, ...rows]
+            .map(row => row.map(cell => `"${cell}"`).join(','))
+            .join('\n');
+          
+          // Create download
+          const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+          const link = document.createElement('a');
+          const url = URL.createObjectURL(blob);
+          link.setAttribute('href', url);
+          link.setAttribute('download', `superbowl-entries-${new Date().toISOString().split('T')[0]}.csv`);
+          link.style.visibility = 'hidden';
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+        };
         const handleTogglePayment = async (entryId, currentStatus) => {
           setUpdatingPayment(entryId);
           const { error } = await supabaseClient
@@ -556,9 +593,15 @@
                       </div>
                     ))}
                   </div>
-
                     <div className="flex items-center justify-between mb-4">
                       <h2 className="text-xl font-bold">All Entries ({entries.length})</h2>
+                        <div className="flex items-center gap-4">
+                        <button
+                          onClick={exportToCSV}
+                          className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-semibold"
+                        >
+                          Export to CSV
+                        </button>
                       <div className="text-sm">
                         <span className="font-semibold text-green-600">
                           {entries.filter(e => e.paid).length} paid
@@ -568,6 +611,7 @@
                           {entries.filter(e => !e.paid).length} unpaid
                         </span>
                       </div>
+                     </div>
                     </div>
                   <div className="overflow-x-auto">
                     <table className="w-full text-sm">
