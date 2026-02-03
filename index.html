@@ -434,8 +434,8 @@
         );
       }
 
-      // Login View
-      if (view === 'login') {
+        // Login View - also show login if trying to access admin while not logged in
+        if (view === 'login' || (view === 'admin' && !isAdmin)) {
         return (
           <div className="min-h-screen bg-gradient-to-br from-blue-900 via-purple-900 to-blue-800 p-4 flex items-center justify-center">
             <div className="bg-white rounded-lg shadow-2xl p-8 w-full max-w-md">
