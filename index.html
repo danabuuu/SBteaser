@@ -490,9 +490,25 @@
         );
       }
 
-      // Admin View
-      if (view === 'admin' && isAdmin) {
-        return (
+     // Admin View - redirect to login if not authenticated
+        if (view === 'admin') {
+          if (!isAdmin) {
+            return (
+              <div className="min-h-screen bg-gradient-to-br from-blue-900 via-purple-900 to-blue-800 p-4 flex items-center justify-center">
+                <div className="bg-white rounded-lg shadow-2xl p-8">
+                  <p className="text-gray-700 mb-4">Please log in to access the admin panel.</p>
+                  <button
+                    onClick={() => setView('login')}
+                    className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700"
+                  >
+                    Go to Login
+                  </button>
+                </div>
+              </div>
+            );
+          }
+          
+          return (
           <div className="min-h-screen bg-gradient-to-br from-blue-900 via-purple-900 to-blue-800 p-4">
             <div className="max-w-full mx-auto bg-white rounded-lg shadow-2xl p-6">
               <div className="flex items-center justify-between mb-6">
