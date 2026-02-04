@@ -215,6 +215,55 @@
           loadData();
         }
       };
+      
+        const exportCorrectAnswers = () => {
+          // Create two rows: Yes answers and No answers
+          const yesRow = ['Yes'];
+          const noRow = ['No'];
+          
+          for (let i = 0; i < 20; i++) {
+            if (correctAnswers[i] === true) {
+              yesRow.push('X');
+              noRow.push('');
+            } else if (correctAnswers[i] === false) {
+              yesRow.push('');
+              noRow.push('X');
+            } else {
+              // Not answered yet
+              yesRow.push('');
+              noRow.push('');
+            }
+          }
+          
+          const csvContent = [yesRow, noRow]
+            .map(row => row.map(cell => `"${cell}"`).join(','))
+            .join('\n');
+          
+          const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+          const link = document.createElement('a');
+          const url = URL.createObjectURL(blob);
+          link.setAttribute('href', url);
+          link.setAttribute('download', `correct-answers-${new Date().toISOString().split('T')[0]}.csv`);
+          link.style.visibility = 'hidden';
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+        };
+        
+        const exportQuestions = () => {
+          // One question per line
+          const csvContent = questions.map(q => `"${q}"`).join('\n');
+          
+          const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+          const link = document.createElement('a');
+          const url = URL.createObjectURL(blob);
+          link.setAttribute('href', url);
+          link.setAttribute('download', `questions-${new Date().toISOString().split('T')[0]}.csv`);
+          link.style.visibility = 'hidden';
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+        };
         const exportToCSV = () => {
           // Create CSV header
           const headers = ['Name'];
@@ -572,7 +621,23 @@
                 </div>
               ) : (
                 <>
-                  <h2 className="text-xl font-bold mb-4">Enter Correct Answers</h2>
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-xl font-bold">Enter Correct Answers</h2>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={exportCorrectAnswers}
+                      className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-semibold"
+                    >
+                      Export Answers
+                    </button>
+                    <button
+                      onClick={exportQuestions}
+                      className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-semibold"
+                    >
+                      Export Questions
+                    </button>
+                  </div>
+                </div>
                   <div className="space-y-3 mb-8">
                     {questions.map((q, i) => (
                       <div key={i} className="bg-gray-50 p-4 rounded-lg">
