@@ -789,12 +789,18 @@
                       <th className="px-2 py-2 text-left sticky left-0 bg-gray-100 z-10">Rank</th>
                       <th className="px-2 py-2 text-left sticky left-12 bg-gray-100 z-10">Name</th>
                       <th className="px-2 py-2 text-center sticky left-32 bg-gray-100 z-10">Score</th>
-                      {questions.map((_, i) => (
-                        <th key={i} className="px-1 py-2 text-center">
-                          <div className="font-bold">{i + 1}</div>
-                          <div className="text-xs text-gray-500">{calculatePercentages(i)}% Y</div>
-                        </th>
-                      ))}
+                        {questions.map((q, i) => (
+                          <th key={i} className="px-1 py-2 text-center relative group cursor-help">
+                            <div className="font-bold">{i + 1}</div>
+                            <div className="text-xs text-gray-500">{calculatePercentages(i)}% Y</div>
+                            <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 hidden group-hover:block bg-gray-900 text-white text-xs rounded py-2 px-3 whitespace-nowrap z-50 shadow-lg">
+                              <div className="max-w-xs whitespace-normal">{q}</div>
+                              <div className="absolute top-full left-1/2 transform -translate-x-1/2 border-4 border-transparent border-t-gray-900"></div>
+                            </div>
+                          </th>
+                        ))}
+
+
                       <th className="px-2 py-2 text-center">TB</th>
                     </tr>
                   </thead>
