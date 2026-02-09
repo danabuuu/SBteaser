@@ -778,20 +778,12 @@
                     onClick={exportResultsPage}
                     className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 font-semibold"
                   >
-                    📄 Export Results Page
-                  </button>
-
-                  <button
-                    onClick={handleResetForNextYear}
-                    disabled={loading}
-                    className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 font-semibold disabled:opacity-50"
-                  >
-                    🔄 Reset for Next Year
+                    Export Results Page (HTML)
                   </button>
 
                   <button
                     onClick={handleToggleEntries}
-                    className={`px-4 py-2 ${entriesOpen ? 'bg-red-600 hover:bg-red-700' : 'bg-green-600 hover:bg-green-700'} text-white rounded-lg font-semibold`}
+                    className={`px-4 py-2 ${entriesOpen ? 'bg-orange-600 hover:bg-orange-700' : 'bg-green-600 hover:bg-green-700'} text-white rounded-lg font-semibold`}
                   >
                     {entriesOpen ? 'Close Entries' : 'Open Entries'}
                   </button>
@@ -803,12 +795,21 @@
                     <Settings />
                     {editingQuestions ? 'Done Editing' : 'Edit Questions'}
                   </button>
+
+                  <button
+                    onClick={handleResetForNextYear}
+                    disabled={loading}
+                    className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 font-semibold disabled:opacity-50"
+                  >
+                    Reset for Next Year
+                  </button>
+
                   <button
                     onClick={() => {
                       setIsAdmin(false);
                       setView('entry');
                     }}
-                    className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 flex items-center gap-2"
+                    className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 flex items-center gap-2"
                   >
                     <LogOut />
                     Logout
@@ -911,15 +912,15 @@
                     <div className="flex gap-2">
                       <button
                         onClick={exportCorrectAnswers}
-                        className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-semibold"
+                        className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm font-semibold"
                       >
-                        Export Answers
+                        Export Answers to CSV
                       </button>
                       <button
                         onClick={exportQuestions}
-                        className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-semibold"
+                        className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm font-semibold"
                       >
-                        Export Questions
+                        Export Questions to CSV
                       </button>
                     </div>
                   </div>
@@ -975,7 +976,7 @@
                         onClick={exportToCSV}
                         className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-semibold"
                       >
-                        Export to CSV
+                        Export Entries to CSV
                       </button>
                       <div className="text-sm">
                         <span className="font-semibold text-green-600">
