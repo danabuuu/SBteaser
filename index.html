@@ -267,6 +267,109 @@
         link.click();
         document.body.removeChild(link);
       };
+
+      const exportResultsPage = () => {
+        const sorted = sortEntries(entries);
+        const totalAnswered = Object.keys(correctAnswers).length;
+        const calculatePercentage = (questionIndex) => {
+          if (entries.length === 0) return 0;
+          const yesCount = entries.filter(e => e.answers[questionIndex] === true).length;
+          return Math.round((yesCount / entries.length) * 100);
+        };
+
+        const htmlContent = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Super Bowl Pool Results - ${new Date().getFullYear()}</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body>
+  <div class="min-h-screen bg-gradient-to-br from-blue-900 via-purple-900 to-blue-800 p-4">
+    <div class="max-w-7xl mx-auto bg-white rounded-lg shadow-2xl p-6">
+      <div class="mb-6">
+        <div class="flex flex-col items-center gap-4 mb-6">
+          <img
+            src="https://upload.wikimedia.org/wikipedia/en/thumb/1/16/Super_Bowl_logo.svg/2560px-Super_Bowl_logo.svg.png"
+            alt="Super Bowl Logo"
+            class="h-24"
+          />
+          <h1 class="text-3xl font-bold">Final Results - ${new Date().getFullYear()}</h1>
+          <div class="text-lg font-semibold text-gray-700">
+            ${totalAnswered} of 20 questions answered • Max possible score: ${totalAnswered}
+          </div>
+          ${actualTotalPoints !== null ? `<div class="text-md text-gray-600">Actual Total Points: ${actualTotalPoints}</div>` : ''}
+          <div class="text-sm text-gray-500">Exported on ${new Date().toLocaleDateString()}</div>
+        </div>
+      </div>
+      <div class="overflow-x-auto overflow-y-visible">
+        <table class="w-full text-xs relative">
+          <thead>
+            <tr class="bg-gray-100">
+              <th class="px-2 py-2 text-left sticky left-0 bg-gray-100 z-10">Rank</th>
+              <th class="px-2 py-2 text-left sticky left-12 bg-gray-100 z-10">Name</th>
+              <th class="px-2 py-2 text-center sticky left-32 bg-gray-100 z-10">
+                <div>Score</div>
+                <div class="text-xs font-normal text-gray-500">of ${totalAnswered}</div>
+              </th>
+              ${questions.map((q, i) => `
+              <th class="px-1 py-2 text-center relative group cursor-help ${correctAnswers[i] !== undefined ? 'bg-blue-100' : ''}">
+                <div class="font-bold flex items-center justify-center gap-1">
+                  ${i + 1}
+                  ${correctAnswers[i] !== undefined ? '<span class="text-green-600">✓</span>' : ''}
+                </div>
+                <div class="text-xs text-gray-500">${calculatePercentage(i)}% Y</div>
+                <div class="absolute top-full mt-2 hidden group-hover:block bg-gray-900 text-white text-xs rounded py-2 px-3 z-50 shadow-lg min-w-max max-w-xs ${i >= 17 ? 'right-0' : 'left-1/2 transform -translate-x-1/2'}">
+                  <div class="whitespace-normal">${q}</div>
+                  ${correctAnswers[i] !== undefined ? `
+                  <div class="mt-2 pt-2 border-t border-gray-700 font-semibold">
+                    Answer: ${correctAnswers[i] ? 'YES' : 'NO'}
+                  </div>` : ''}
+                  <div class="absolute bottom-full border-4 border-transparent border-b-gray-900 ${i >= 17 ? 'right-3' : 'left-1/2 transform -translate-x-1/2'}"></div>
+                </div>
+              </th>`).join('')}
+              <th class="px-2 py-2 text-center">TB</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${sorted.map((entry, rank) => `
+            <tr class="border-b hover:bg-gray-50">
+              <td class="px-2 py-2 font-bold sticky left-0 bg-white z-10">${rank + 1}</td>
+              <td class="px-2 py-2 font-semibold sticky left-12 bg-white z-10">${entry.name}</td>
+              <td class="px-2 py-2 text-center font-bold text-lg text-purple-600 sticky left-32 bg-white z-10">
+                ${calculateScore(entry)}
+              </td>
+              ${entry.answers.map((ans, i) => `
+              <td class="px-1 py-2 text-center font-bold ${
+                correctAnswers[i] !== undefined
+                  ? correctAnswers[i] === ans
+                    ? 'bg-green-400 text-white'
+                    : 'bg-red-200'
+                  : ''
+              }">
+                ${ans ? 'Y' : ' N'}
+              </td>`).join('')}
+              <td class="px-2 py-2 text-center text-gray-600">${entry.tiebreaker}</td>
+            </tr>`).join('')}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</body>
+</html>`;
+
+        const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8;' });
+        const link = document.createElement('a');
+        const url = URL.createObjectURL(blob);
+        link.setAttribute('href', url);
+        link.setAttribute('download', `superbowl-results-${new Date().getFullYear()}.html`);
+        link.style.visibility = 'hidden';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      };
       const exportToCSV = () => {
         // Create CSV header
         const headers = ['Name'];
@@ -597,6 +700,13 @@
                   <h1 className="text-3xl font-bold">Admin Panel</h1>
                 </div>
                 <div className="flex gap-2">
+                  <button
+                    onClick={exportResultsPage}
+                    className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 font-semibold"
+                  >
+                    📄 Export Results Page
+                  </button>
+
                   <button
                     onClick={handleToggleEntries}
                     className={`px-4 py-2 ${entriesOpen ? 'bg-red-600 hover:bg-red-700' : 'bg-green-600 hover:bg-green-700'} text-white rounded-lg font-semibold`}
