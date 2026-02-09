@@ -49,6 +49,8 @@
       const [editingQuestions, setEditingQuestions] = useState(false);
       const [entriesOpen, setEntriesOpen] = useState(true);
       const [updatingPayment, setUpdatingPayment] = useState(null);
+      const [showEmailComposer, setShowEmailComposer] = useState(false);
+      const [emailMessage, setEmailMessage] = useState('');
       // Get initial view from URL query string (e.g., ?view=scores)
       const getInitialView = () => {
         const params = new URLSearchParams(window.location.search);
@@ -473,6 +475,32 @@
         }
       };
 
+      const handleSendEmail = async () => {
+        if (!emailMessage.trim()) {
+          alert('Please enter a message');
+          return;
+        }
+
+        const recipients = entries.filter(e => e.email).map(e => e.email);
+
+        if (recipients.length === 0) {
+          alert('No entries with email addresses found');
+          return;
+        }
+
+        const scoresUrl = window.location.origin + window.location.pathname + '?view=scores';
+        const subject = encodeURIComponent('Super Bowl Pool Update');
+        const body = encodeURIComponent(
+          emailMessage + '\n\n' +
+          'View Current Scores:\n' +
+          scoresUrl + '\n\n' +
+          'Good luck!'
+        );
+
+        const mailtoLink = `mailto:${recipients.join(',')}?subject=${subject}&body=${body}`;
+        window.location.href = mailtoLink;
+      };
+
       // Entry Form
       if (view === 'entry') {
         return (
@@ -774,6 +802,48 @@
                       <span className="ml-3 text-green-600 font-semibold">✓ Set</span>
                     )}
                   </div>
+
+                  <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                    <div className="flex items-center justify-between mb-3">
+                      <h3 className="font-semibold text-lg">Email Players</h3>
+                      <button
+                        onClick={() => setShowEmailComposer(!showEmailComposer)}
+                        className="px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 text-sm"
+                      >
+                        {showEmailComposer ? 'Close' : 'Compose Email'}
+                      </button>
+                    </div>
+                    {showEmailComposer && (
+                      <div className="space-y-3">
+                        <div>
+                          <label className="block text-sm font-semibold mb-1">Message</label>
+                          <textarea
+                            value={emailMessage}
+                            onChange={(e) => setEmailMessage(e.target.value)}
+                            className="w-full px-3 py-2 border rounded-lg"
+                            rows="4"
+                            placeholder="Enter your message to players..."
+                          />
+                          <p className="text-xs text-gray-600 mt-1">
+                            A link to view scores will be automatically included. This will open your email client with all recipients pre-filled.
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <button
+                            onClick={handleSendEmail}
+                            disabled={!emailMessage.trim()}
+                            className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            Open Email with {entries.filter(e => e.email).length} recipient(s)
+                          </button>
+                          <span className="text-sm text-gray-600">
+                            {entries.filter(e => e.email).length} of {entries.length} entries have email addresses
+                          </span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
                   <div className="flex items-center justify-between mb-4">
                     <div>
                       <h2 className="text-xl font-bold">Enter Correct Answers</h2>
