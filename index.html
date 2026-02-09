@@ -496,8 +496,9 @@
           scoresUrl + '\n\n' +
           'Good luck!'
         );
+        const bcc = encodeURIComponent(recipients.join(','));
 
-        const mailtoLink = `mailto:${recipients.join(',')}?subject=${subject}&body=${body}`;
+        const mailtoLink = `mailto:?bcc=${bcc}&subject=${subject}&body=${body}`;
         window.location.href = mailtoLink;
       };
 
