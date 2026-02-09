@@ -523,7 +523,7 @@
           const { error: deleteError } = await supabaseClient
             .from('entries')
             .delete()
-            .neq('id', 0); // Delete all rows
+            .gte('id', 0); // Delete all rows (all IDs are >= 0)
 
           if (deleteError) throw deleteError;
 
