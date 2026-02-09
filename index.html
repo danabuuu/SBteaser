@@ -763,6 +763,7 @@
       // Scores View
       if (view === 'scores') {
         const sorted = [...entries].sort((a, b) => calculateScore(b) - calculateScore(a));
+        const totalAnswered = Object.keys(correctAnswers).length;
         return (
           <div className="min-h-screen bg-gradient-to-br from-blue-900 via-purple-900 to-blue-800 p-4">
             <div className="max-w-7xl mx-auto bg-white rounded-lg shadow-2xl p-6">
@@ -774,6 +775,9 @@
                     className="h-24"
                   />
                   <h1 className="text-3xl font-bold">Live Scoreboard</h1>
+                  <div className="text-lg font-semibold text-gray-700">
+                    {totalAnswered} of 20 questions answered • Max possible score: {totalAnswered}
+                  </div>
                 </div>
                 <div className="flex justify-center mt-4">
                   <button onClick={() => setView('entry')} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
@@ -787,7 +791,10 @@
                     <tr className="bg-gray-100">
                       <th className="px-2 py-2 text-left sticky left-0 bg-gray-100 z-10">Rank</th>
                       <th className="px-2 py-2 text-left sticky left-12 bg-gray-100 z-10">Name</th>
-                      <th className="px-2 py-2 text-center sticky left-32 bg-gray-100 z-10">Score</th>
+                      <th className="px-2 py-2 text-center sticky left-32 bg-gray-100 z-10">
+                        <div>Score</div>
+                        <div className="text-xs font-normal text-gray-500">of {totalAnswered}</div>
+                      </th>
                       {questions.map((q, i) => (
                         <th key={i} className={`px-1 py-2 text-center relative group cursor-help ${correctAnswers[i] !== undefined ? 'bg-blue-100' : ''}`}>
                           <div className="font-bold flex items-center justify-center gap-1">
