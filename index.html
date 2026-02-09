@@ -789,12 +789,22 @@
                       <th className="px-2 py-2 text-left sticky left-12 bg-gray-100 z-10">Name</th>
                       <th className="px-2 py-2 text-center sticky left-32 bg-gray-100 z-10">Score</th>
                       {questions.map((q, i) => (
-                        <th key={i} className="px-1 py-2 text-center relative group cursor-help">
-                          <div className="font-bold">{i + 1}</div>
+                        <th key={i} className={`px-1 py-2 text-center relative group cursor-help ${correctAnswers[i] !== undefined ? 'bg-blue-100' : ''}`}>
+                          <div className="font-bold flex items-center justify-center gap-1">
+                            {i + 1}
+                            {correctAnswers[i] !== undefined && (
+                              <span className="text-green-600">✓</span>
+                            )}
+                          </div>
                           <div className="text-xs text-gray-500">{calculatePercentages(i)}% Y</div>
                           <div className={`absolute top-full mt-2 hidden group-hover:block bg-gray-900 text-white text-xs rounded py-2 px-3 z-50 shadow-lg min-w-max max-w-xs ${i >= 17 ? 'right-0' : 'left-1/2 transform -translate-x-1/2'
                             }`}>
                             <div className="whitespace-normal">{q}</div>
+                            {correctAnswers[i] !== undefined && (
+                              <div className="mt-2 pt-2 border-t border-gray-700 font-semibold">
+                                Answer: {correctAnswers[i] ? 'YES' : 'NO'}
+                              </div>
+                            )}
                             <div className={`absolute bottom-full border-4 border-transparent border-b-gray-900 ${i >= 17 ? 'right-3' : 'left-1/2 transform -translate-x-1/2'
                               }`}></div>
                           </div>
