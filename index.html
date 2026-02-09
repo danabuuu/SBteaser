@@ -40,6 +40,7 @@
       const [entries, setEntries] = useState([]);
       const [questions, setQuestions] = useState([]);
       const [correctAnswers, setCorrectAnswers] = useState({});
+      const [actualTotalPoints, setActualTotalPoints] = useState(null);
 
       const [isAdmin, setIsAdmin] = useState(false);
       const [loginForm, setLoginForm] = useState({ username: '', password: '' });
@@ -129,6 +130,7 @@
           }
           setCorrectAnswers(ans);
           setEntriesOpen(answersData.entries_open !== false);
+          setActualTotalPoints(answersData.actual_total_points);
         }
       };
 
@@ -353,6 +355,34 @@
         if (entries.length === 0) return 0;
         const yesCount = entries.filter(e => e.answers[questionIndex] === true).length;
         return Math.round((yesCount / entries.length) * 100);
+      };
+
+      const sortEntries = (entries) => {
+        return [...entries].sort((a, b) => {
+          const scoreA = calculateScore(a);
+          const scoreB = calculateScore(b);
+          if (scoreB !== scoreA) return scoreB - scoreA;
+          
+          // If scores are equal and we have actual total points, sort by tiebreaker distance
+          if (actualTotalPoints !== null) {
+            const distanceA = Math.abs(a.tiebreaker - actualTotalPoints);
+            const distanceB = Math.abs(b.tiebreaker - actualTotalPoints);
+            return distanceA - distanceB;
+          }
+          return 0;
+        });
+      };
+
+      const handleActualTotalPointsChange = async (value) => {
+        const points = value === '' ? null : parseInt(value);
+        const { error } = await supabaseClient
+          .from('correct_answers')
+          .update({ actual_total_points: points })
+          .eq('id', 1);
+        
+        if (!error) {
+          setActualTotalPoints(points);
+        }
       };
 
       // Entry Form
@@ -622,6 +652,19 @@
                 </div>
               ) : (
                 <>
+                  <div className="mb-6">
+                    <label className="block font-semibold mb-2">Actual Total Points in Game (for tiebreaker)</label>
+                    <input
+                      type="number"
+                      value={actualTotalPoints === null ? '' : actualTotalPoints}
+                      onChange={(e) => handleActualTotalPointsChange(e.target.value)}
+                      className="w-48 px-4 py-2 border rounded-lg"
+                      placeholder="e.g., 48"
+                    />
+                    {actualTotalPoints !== null && (
+                      <span className="ml-3 text-green-600 font-semibold">✓ Set</span>
+                    )}
+                  </div>
                   <div className="flex items-center justify-between mb-4">
                     <h2 className="text-xl font-bold">Enter Correct Answers</h2>
                     <div className="flex gap-2">
@@ -709,7 +752,7 @@
                         </tr>
                       </thead>
                       <tbody>
-                        {[...entries].sort((a, b) => calculateScore(b) - calculateScore(a)).map((entry) => (
+                        {sortEntries(entries).map((entry) => (
                           <tr key={entry.id} className="border-b hover:bg-gray-50">
                             <td className="px-3 py-3 font-semibold">{entry.name}</td>
                             <td className="px-3 py-3 text-sm">{entry.email}</td>
@@ -762,7 +805,7 @@
 
       // Scores View
       if (view === 'scores') {
-        const sorted = [...entries].sort((a, b) => calculateScore(b) - calculateScore(a));
+        const sorted = sortEntries(entries);
         const totalAnswered = Object.keys(correctAnswers).length;
         return (
           <div className="min-h-screen bg-gradient-to-br from-blue-900 via-purple-900 to-blue-800 p-4">
