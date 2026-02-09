@@ -491,6 +491,20 @@
                   <button onClick={() => setView('scores')} className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">
                     View Scores
                   </button>
+                  <select 
+                    onChange={(e) => {
+                      if (e.target.value) {
+                        window.open('https://danabuuu.github.io/SBteaser/results-' + e.target.value + '.html', '_blank');
+                        e.target.value = '';
+                      }
+                    }}
+                    className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
+                  >
+                    <option value="">Past Results...</option>
+                    {Array.from({ length: new Date().getFullYear() - 2026 + 1 }, (_, i) => 2026 + i).reverse().map(year => (
+                      <option key={year} value={year}>{year}</option>
+                    ))}
+                  </select>
                   <button onClick={() => setView('login')} className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700">
                     Admin
                   </button>
@@ -931,6 +945,23 @@
                   <h1 className="text-3xl font-bold">Live Scoreboard</h1>
                   <div className="text-lg font-semibold text-gray-700">
                     {totalAnswered} of 20 questions answered • Max possible score: {totalAnswered}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <label className="text-sm font-semibold text-gray-600">View Past Results:</label>
+                    <select 
+                      onChange={(e) => {
+                        if (e.target.value) {
+                          window.open('https://danabuuu.github.io/SBteaser/results-' + e.target.value + '.html', '_blank');
+                          e.target.value = '';
+                        }
+                      }}
+                      className="px-3 py-1 border rounded-lg text-sm"
+                    >
+                      <option value="">Select a year...</option>
+                      {Array.from({ length: new Date().getFullYear() - 2026 + 1 }, (_, i) => 2026 + i).reverse().map(year => (
+                        <option key={year} value={year}>{year}</option>
+                      ))}
+                    </select>
                   </div>
                 </div>
                 <div className="flex justify-center mt-4">
