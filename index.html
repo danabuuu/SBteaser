@@ -40,6 +40,7 @@
       const [entries, setEntries] = useState([]);
       const [questions, setQuestions] = useState([]);
       const [correctAnswers, setCorrectAnswers] = useState({});
+      const [actualTotalPoints, setActualTotalPoints] = useState(null);
 
       const [isAdmin, setIsAdmin] = useState(false);
       const [loginForm, setLoginForm] = useState({ username: '', password: '' });
@@ -48,6 +49,8 @@
       const [editingQuestions, setEditingQuestions] = useState(false);
       const [entriesOpen, setEntriesOpen] = useState(true);
       const [updatingPayment, setUpdatingPayment] = useState(null);
+      const [showEmailComposer, setShowEmailComposer] = useState(false);
+      const [emailMessage, setEmailMessage] = useState('');
       // Get initial view from URL query string (e.g., ?view=scores)
       const getInitialView = () => {
         const params = new URLSearchParams(window.location.search);
@@ -129,6 +132,7 @@
           }
           setCorrectAnswers(ans);
           setEntriesOpen(answersData.entries_open !== false);
+          setActualTotalPoints(answersData.actual_total_points);
         }
       };
 
@@ -265,6 +269,94 @@
         link.click();
         document.body.removeChild(link);
       };
+
+      const exportResultsPage = () => {
+        const sorted = sortEntries(entries);
+        const totalAnswered = Object.keys(correctAnswers).length;
+        const calculatePercentage = (questionIndex) => {
+          if (entries.length === 0) return 0;
+          const yesCount = entries.filter(e => e.answers[questionIndex] === true).length;
+          return Math.round((yesCount / entries.length) * 100);
+        };
+
+        const year = new Date().getFullYear();
+        const exportDate = new Date().toLocaleDateString();
+        const actualPointsHtml = actualTotalPoints !== null 
+          ? '<div class="text-md text-gray-600">Actual Total Points: ' + actualTotalPoints + '</div>' 
+          : '';
+        
+        const questionsHtml = questions.map((q, i) => {
+          const isAnswered = correctAnswers[i] !== undefined;
+          const bgClass = isAnswered ? 'bg-blue-100' : '';
+          const checkmark = isAnswered ? '<span class="text-green-600">✓</span>' : '';
+          const answerInfo = isAnswered 
+            ? '<div class="mt-2 pt-2 border-t border-gray-700 font-semibold">Answer: ' + (correctAnswers[i] ? 'YES' : 'NO') + '</div>'
+            : '';
+          const tooltipPos = i >= 17 ? 'right-0' : 'left-1/2 transform -translate-x-1/2';
+          const arrowPos = i >= 17 ? 'right-3' : 'left-1/2 transform -translate-x-1/2';
+          
+          return '<th class="px-1 py-2 text-center relative group cursor-help ' + bgClass + '">' +
+            '<div class="font-bold flex items-center justify-center gap-1">' + (i + 1) + checkmark + '</div>' +
+            '<div class="text-xs text-gray-500">' + calculatePercentage(i) + '% Y</div>' +
+            '<div class="absolute top-full mt-2 hidden group-hover:block bg-gray-900 text-white text-xs rounded py-2 px-3 z-50 shadow-lg min-w-max max-w-xs ' + tooltipPos + '">' +
+            '<div class="whitespace-normal">' + q + '</div>' + answerInfo +
+            '<div class="absolute bottom-full border-4 border-transparent border-b-gray-900 ' + arrowPos + '"></div>' +
+            '</div></th>';
+        }).join('');
+
+        const rowsHtml = sorted.map((entry, rank) => {
+          const answersHtml = entry.answers.map((ans, i) => {
+            let cellClass = 'px-1 py-2 text-center font-bold ';
+            if (correctAnswers[i] !== undefined) {
+              cellClass += correctAnswers[i] === ans ? 'bg-green-400 text-white' : 'bg-red-200';
+            }
+            return '<td class="' + cellClass + '">' + (ans ? 'Y' : ' N') + '</td>';
+          }).join('');
+          
+          return '<tr class="border-b hover:bg-gray-50">' +
+            '<td class="px-2 py-2 font-bold sticky left-0 bg-white z-10">' + (rank + 1) + '</td>' +
+            '<td class="px-2 py-2 font-semibold sticky left-12 bg-white z-10">' + entry.name + '</td>' +
+            '<td class="px-2 py-2 text-center font-bold text-lg text-purple-600 sticky left-32 bg-white z-10">' + calculateScore(entry) + '</td>' +
+            answersHtml +
+            '<td class="px-2 py-2 text-center text-gray-600">' + entry.tiebreaker + '</td>' +
+            '</tr>';
+        }).join('');
+
+        const htmlContent = '<!DOCTYPE html><html lang="en"><head>' +
+          '<meta charset="UTF-8">' +
+          '<meta name="viewport" content="width=device-width, initial-scale=1.0">' +
+          '<title>Super Bowl Pool Results - ' + year + '</title>' +
+          '<script src="https://cdn.tailwindcss.com"></scr' + 'ipt>' +
+          '</head><body>' +
+          '<div class="min-h-screen bg-gradient-to-br from-blue-900 via-purple-900 to-blue-800 p-4">' +
+          '<div class="max-w-7xl mx-auto bg-white rounded-lg shadow-2xl p-6">' +
+          '<div class="mb-6"><div class="flex flex-col items-center gap-4 mb-6">' +
+          '<img src="https://upload.wikimedia.org/wikipedia/en/thumb/1/16/Super_Bowl_logo.svg/2560px-Super_Bowl_logo.svg.png" alt="Super Bowl Logo" class="h-24"/>' +
+          '<h1 class="text-3xl font-bold">Final Results - ' + year + '</h1>' +
+          '<div class="text-lg font-semibold text-gray-700">' + totalAnswered + ' of 20 questions answered • Max possible score: ' + totalAnswered + '</div>' +
+          actualPointsHtml +
+          '<div class="text-sm text-gray-500">Exported on ' + exportDate + '</div>' +
+          '</div></div>' +
+          '<div class="overflow-x-auto overflow-y-visible">' +
+          '<table class="w-full text-xs relative"><thead><tr class="bg-gray-100">' +
+          '<th class="px-2 py-2 text-left sticky left-0 bg-gray-100 z-10">Rank</th>' +
+          '<th class="px-2 py-2 text-left sticky left-12 bg-gray-100 z-10">Name</th>' +
+          '<th class="px-2 py-2 text-center sticky left-32 bg-gray-100 z-10"><div>Score</div><div class="text-xs font-normal text-gray-500">of ' + totalAnswered + '</div></th>' +
+          questionsHtml +
+          '<th class="px-2 py-2 text-center">TB</th>' +
+          '</tr></thead><tbody>' + rowsHtml + '</tbody></table>' +
+          '</div></div></div></body></html>';
+
+        const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8;' });
+        const link = document.createElement('a');
+        const url = URL.createObjectURL(blob);
+        link.setAttribute('href', url);
+        link.setAttribute('download', 'results-' + year + '.html');
+        link.style.visibility = 'hidden';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      };
       const exportToCSV = () => {
         // Create CSV header
         const headers = ['Name'];
@@ -355,6 +447,107 @@
         return Math.round((yesCount / entries.length) * 100);
       };
 
+      const sortEntries = (entries) => {
+        return [...entries].sort((a, b) => {
+          const scoreA = calculateScore(a);
+          const scoreB = calculateScore(b);
+          if (scoreB !== scoreA) return scoreB - scoreA;
+          
+          // If scores are equal and we have actual total points, sort by tiebreaker distance
+          if (actualTotalPoints !== null) {
+            const distanceA = Math.abs(a.tiebreaker - actualTotalPoints);
+            const distanceB = Math.abs(b.tiebreaker - actualTotalPoints);
+            return distanceA - distanceB;
+          }
+          return 0;
+        });
+      };
+
+      const handleActualTotalPointsChange = async (value) => {
+        const points = value === '' ? null : parseInt(value);
+        const { error } = await supabaseClient
+          .from('correct_answers')
+          .update({ actual_total_points: points })
+          .eq('id', 1);
+        
+        if (!error) {
+          setActualTotalPoints(points);
+        }
+      };
+
+      const handleSendEmail = async () => {
+        if (!emailMessage.trim()) {
+          alert('Please enter a message');
+          return;
+        }
+
+        const recipients = entries.filter(e => e.email).map(e => e.email);
+
+        if (recipients.length === 0) {
+          alert('No entries with email addresses found');
+          return;
+        }
+
+        const scoresUrl = window.location.origin + window.location.pathname + '?view=scores';
+        const subject = encodeURIComponent('Super Bowl Pool Update');
+        const body = encodeURIComponent(
+          emailMessage + '\n\n' +
+          'View Current Scores:\n' +
+          scoresUrl + '\n\n' +
+          'Good luck!'
+        );
+        const bcc = encodeURIComponent(recipients.join(','));
+
+        const mailtoLink = `mailto:?bcc=${bcc}&subject=${subject}&body=${body}`;
+        window.location.href = mailtoLink;
+      };
+
+      const handleResetForNextYear = async () => {
+        const confirmText = 'RESET';
+        const userInput = prompt(
+          `⚠️ WARNING: This will DELETE all ${entries.length} entries and reset all answers!\n\n` +
+          `Questions will be preserved.\n\n` +
+          `Make sure you've exported the results first!\n\n` +
+          `Type "${confirmText}" to confirm:`
+        );
+
+        if (userInput !== confirmText) {
+          alert('Reset cancelled');
+          return;
+        }
+
+        setLoading(true);
+
+        try {
+          // Delete all entries
+          const { error: deleteError } = await supabaseClient
+            .from('entries')
+            .delete()
+            .gte('id', 0); // Delete all rows (all IDs are >= 0)
+
+          if (deleteError) throw deleteError;
+
+          // Reset correct answers
+          const { error: resetError } = await supabaseClient
+            .from('correct_answers')
+            .update({
+              answers_bits: 0,
+              answered_mask: 0,
+              actual_total_points: null
+            })
+            .eq('id', 1);
+
+          if (resetError) throw resetError;
+
+          setLoading(false);
+          alert('✓ Reset complete! Ready for next year.');
+          loadData();
+        } catch (error) {
+          setLoading(false);
+          alert('Error during reset: ' + error.message);
+        }
+      };
+
       // Entry Form
       if (view === 'entry') {
         return (
@@ -373,6 +566,20 @@
                   <button onClick={() => setView('scores')} className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">
                     View Scores
                   </button>
+                  <select 
+                    onChange={(e) => {
+                      if (e.target.value) {
+                        window.open('https://danabuuu.github.io/SBteaser/results-' + e.target.value + '.html', '_blank');
+                        e.target.value = '';
+                      }
+                    }}
+                    className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
+                  >
+                    <option value="">Past Results...</option>
+                    {Array.from({ length: new Date().getFullYear() - 2026 + 1 }, (_, i) => 2026 + i).reverse().map(year => (
+                      <option key={year} value={year}>{year}</option>
+                    ))}
+                  </select>
                   <button onClick={() => setView('login')} className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700">
                     Admin
                   </button>
@@ -568,8 +775,15 @@
                 </div>
                 <div className="flex gap-2">
                   <button
+                    onClick={exportResultsPage}
+                    className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 font-semibold"
+                  >
+                    Export Results Page (HTML)
+                  </button>
+
+                  <button
                     onClick={handleToggleEntries}
-                    className={`px-4 py-2 ${entriesOpen ? 'bg-red-600 hover:bg-red-700' : 'bg-green-600 hover:bg-green-700'} text-white rounded-lg font-semibold`}
+                    className={`px-4 py-2 ${entriesOpen ? 'bg-orange-600 hover:bg-orange-700' : 'bg-green-600 hover:bg-green-700'} text-white rounded-lg font-semibold`}
                   >
                     {entriesOpen ? 'Close Entries' : 'Open Entries'}
                   </button>
@@ -581,12 +795,21 @@
                     <Settings />
                     {editingQuestions ? 'Done Editing' : 'Edit Questions'}
                   </button>
+
+                  <button
+                    onClick={handleResetForNextYear}
+                    disabled={loading}
+                    className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 font-semibold disabled:opacity-50"
+                  >
+                    Reset for Next Year
+                  </button>
+
                   <button
                     onClick={() => {
                       setIsAdmin(false);
                       setView('entry');
                     }}
-                    className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 flex items-center gap-2"
+                    className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 flex items-center gap-2"
                   >
                     <LogOut />
                     Logout
@@ -622,27 +845,98 @@
                 </div>
               ) : (
                 <>
+                  <div className="mb-6">
+                    <label className="block font-semibold mb-2">Actual Total Points in Game (for tiebreaker)</label>
+                    <input
+                      type="number"
+                      value={actualTotalPoints === null ? '' : actualTotalPoints}
+                      onChange={(e) => handleActualTotalPointsChange(e.target.value)}
+                      className="w-48 px-4 py-2 border rounded-lg"
+                      placeholder="e.g., 48"
+                    />
+                    {actualTotalPoints !== null && (
+                      <span className="ml-3 text-green-600 font-semibold">✓ Set</span>
+                    )}
+                  </div>
+
+                  <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                    <div className="flex items-center justify-between mb-3">
+                      <h3 className="font-semibold text-lg">Email Players</h3>
+                      <button
+                        onClick={() => setShowEmailComposer(!showEmailComposer)}
+                        className="px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 text-sm"
+                      >
+                        {showEmailComposer ? 'Close' : 'Compose Email'}
+                      </button>
+                    </div>
+                    {showEmailComposer && (
+                      <div className="space-y-3">
+                        <div>
+                          <label className="block text-sm font-semibold mb-1">Message</label>
+                          <textarea
+                            value={emailMessage}
+                            onChange={(e) => setEmailMessage(e.target.value)}
+                            className="w-full px-3 py-2 border rounded-lg"
+                            rows="4"
+                            placeholder="Enter your message to players..."
+                          />
+                          <p className="text-xs text-gray-600 mt-1">
+                            A link to view scores will be automatically included. This will open your email client with all recipients pre-filled.
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <button
+                            onClick={handleSendEmail}
+                            disabled={!emailMessage.trim()}
+                            className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            Open Email with {entries.filter(e => e.email).length} recipient(s)
+                          </button>
+                          <span className="text-sm text-gray-600">
+                            {entries.filter(e => e.email).length} of {entries.length} entries have email addresses
+                          </span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
                   <div className="flex items-center justify-between mb-4">
-                    <h2 className="text-xl font-bold">Enter Correct Answers</h2>
+                    <div>
+                      <h2 className="text-xl font-bold">Enter Correct Answers</h2>
+                      <p className="text-sm text-gray-600 mt-1">
+                        <span className="font-semibold text-green-600">{Object.keys(correctAnswers).length} answered</span>
+                        {' • '}
+                        <span className="font-semibold text-orange-600">{20 - Object.keys(correctAnswers).length} remaining</span>
+                      </p>
+                    </div>
                     <div className="flex gap-2">
                       <button
                         onClick={exportCorrectAnswers}
-                        className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-semibold"
+                        className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm font-semibold"
                       >
-                        Export Answers
+                        Export Answers to CSV
                       </button>
                       <button
                         onClick={exportQuestions}
-                        className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-semibold"
+                        className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm font-semibold"
                       >
-                        Export Questions
+                        Export Questions to CSV
                       </button>
                     </div>
                   </div>
                   <div className="space-y-3 mb-8">
                     {questions.map((q, i) => (
-                      <div key={i} className="bg-gray-50 p-4 rounded-lg">
-                        <p className="mb-3"><strong>{i + 1}.</strong> {q}</p>
+                      <div key={i} className={`p-4 rounded-lg border-2 ${
+                        correctAnswers[i] !== undefined 
+                          ? 'bg-green-50 border-green-300' 
+                          : 'bg-orange-50 border-orange-300'
+                      }`}>
+                        <p className="mb-3">
+                          <strong>{i + 1}.</strong> {q}
+                          {correctAnswers[i] !== undefined && (
+                            <span className="ml-2 text-green-600 font-bold">✓</span>
+                          )}
+                        </p>
                         <div className="flex gap-4">
                           <label className="flex items-center cursor-pointer">
                             <input
@@ -682,7 +976,7 @@
                         onClick={exportToCSV}
                         className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-semibold"
                       >
-                        Export to CSV
+                        Export Entries to CSV
                       </button>
                       <div className="text-sm">
                         <span className="font-semibold text-green-600">
@@ -709,7 +1003,7 @@
                         </tr>
                       </thead>
                       <tbody>
-                        {[...entries].sort((a, b) => calculateScore(b) - calculateScore(a)).map((entry) => (
+                        {sortEntries(entries).map((entry) => (
                           <tr key={entry.id} className="border-b hover:bg-gray-50">
                             <td className="px-3 py-3 font-semibold">{entry.name}</td>
                             <td className="px-3 py-3 text-sm">{entry.email}</td>
@@ -762,7 +1056,8 @@
 
       // Scores View
       if (view === 'scores') {
-        const sorted = [...entries].sort((a, b) => calculateScore(b) - calculateScore(a));
+        const sorted = sortEntries(entries);
+        const totalAnswered = Object.keys(correctAnswers).length;
         return (
           <div className="min-h-screen bg-gradient-to-br from-blue-900 via-purple-900 to-blue-800 p-4">
             <div className="max-w-7xl mx-auto bg-white rounded-lg shadow-2xl p-6">
@@ -774,6 +1069,26 @@
                     className="h-24"
                   />
                   <h1 className="text-3xl font-bold">Live Scoreboard</h1>
+                  <div className="text-lg font-semibold text-gray-700">
+                    {totalAnswered} of 20 questions answered • Max possible score: {totalAnswered}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <label className="text-sm font-semibold text-gray-600">View Past Results:</label>
+                    <select 
+                      onChange={(e) => {
+                        if (e.target.value) {
+                          window.open('https://danabuuu.github.io/SBteaser/results-' + e.target.value + '.html', '_blank');
+                          e.target.value = '';
+                        }
+                      }}
+                      className="px-3 py-1 border rounded-lg text-sm"
+                    >
+                      <option value="">Select a year...</option>
+                      {Array.from({ length: new Date().getFullYear() - 2026 + 1 }, (_, i) => 2026 + i).reverse().map(year => (
+                        <option key={year} value={year}>{year}</option>
+                      ))}
+                    </select>
+                  </div>
                 </div>
                 <div className="flex justify-center mt-4">
                   <button onClick={() => setView('entry')} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
@@ -787,14 +1102,27 @@
                     <tr className="bg-gray-100">
                       <th className="px-2 py-2 text-left sticky left-0 bg-gray-100 z-10">Rank</th>
                       <th className="px-2 py-2 text-left sticky left-12 bg-gray-100 z-10">Name</th>
-                      <th className="px-2 py-2 text-center sticky left-32 bg-gray-100 z-10">Score</th>
+                      <th className="px-2 py-2 text-center sticky left-32 bg-gray-100 z-10">
+                        <div>Score</div>
+                        <div className="text-xs font-normal text-gray-500">of {totalAnswered}</div>
+                      </th>
                       {questions.map((q, i) => (
-                        <th key={i} className="px-1 py-2 text-center relative group cursor-help">
-                          <div className="font-bold">{i + 1}</div>
+                        <th key={i} className={`px-1 py-2 text-center relative group cursor-help ${correctAnswers[i] !== undefined ? 'bg-blue-100' : ''}`}>
+                          <div className="font-bold flex items-center justify-center gap-1">
+                            {i + 1}
+                            {correctAnswers[i] !== undefined && (
+                              <span className="text-green-600">✓</span>
+                            )}
+                          </div>
                           <div className="text-xs text-gray-500">{calculatePercentages(i)}% Y</div>
                           <div className={`absolute top-full mt-2 hidden group-hover:block bg-gray-900 text-white text-xs rounded py-2 px-3 z-50 shadow-lg min-w-max max-w-xs ${i >= 17 ? 'right-0' : 'left-1/2 transform -translate-x-1/2'
                             }`}>
                             <div className="whitespace-normal">{q}</div>
+                            {correctAnswers[i] !== undefined && (
+                              <div className="mt-2 pt-2 border-t border-gray-700 font-semibold">
+                                Answer: {correctAnswers[i] ? 'YES' : 'NO'}
+                              </div>
+                            )}
                             <div className={`absolute bottom-full border-4 border-transparent border-b-gray-900 ${i >= 17 ? 'right-3' : 'left-1/2 transform -translate-x-1/2'
                               }`}></div>
                           </div>
@@ -814,8 +1142,11 @@
                         {entry.answers.map((ans, i) => (
                           <td
                             key={i}
-                            className={`px-1 py-2 text-center font-bold ${correctAnswers[i] !== undefined && correctAnswers[i] === ans
-                                ? 'bg-green-400 text-white'
+                            className={`px-1 py-2 text-center font-bold ${
+                              correctAnswers[i] !== undefined
+                                ? correctAnswers[i] === ans
+                                  ? 'bg-green-400 text-white'
+                                  : 'bg-red-200'
                                 : ''
                               }`}
                           >
