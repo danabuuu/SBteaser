@@ -17,17 +17,22 @@
   <div id="root"></div>
 
   <script type="text/babel">
+    // Single-page React app for the Super Bowl teaser pool.
+    // Uses Supabase for data storage and Tailwind for UI styling.
+    // Pull React hooks and Supabase client factory from global UMD bundles.
     const { useState, useEffect } = React;
     const { createClient } = supabase;
 
     // ============= REPLACE WITH YOUR SUPABASE CREDENTIALS =============
+    // Public URL + anon key for the Supabase project used by this app.
     const SUPABASE_URL = 'https://eggswgehszlqosxyxfap.supabase.co';
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVnZ3N3Z2Voc3pscW9zeHl4ZmFwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk0NjQ2MjAsImV4cCI6MjA4NTA0MDYyMH0.ZGOdzBROuCkjadPvBNdTWVTkGbpZkhZcyhxOI228msI';
 
 
+    // Create a single Supabase client instance for all queries.
     const supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-    // SVG Icons
+    // SVG Icons used across the UI (inline so no build step is required).
     const Trophy = () => <svg className="w-8 h-8 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg>;
     const Users = () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" /></svg>;
     const Lock = () => <svg className="w-8 h-8 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>;
@@ -38,11 +43,15 @@
     const Settings = () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>;
 
     function App() {
+      // =============================
+      // React state: data + UI flags
+      // =============================
       const [entries, setEntries] = useState([]);
       const [questions, setQuestions] = useState([]);
       const [correctAnswers, setCorrectAnswers] = useState({});
       const [actualTotalPoints, setActualTotalPoints] = useState(null);
 
+      // Admin + UI control state.
       const [isAdmin, setIsAdmin] = useState(false);
       const [loginForm, setLoginForm] = useState({ username: '', password: '' });
       const [showPassword, setShowPassword] = useState(false);
@@ -60,7 +69,7 @@
       };
       const [view, setView] = useState(getInitialView());
 
-      // Update URL when view changes
+      // Update URL when view changes so deep links are shareable.
       useEffect(() => {
         const params = new URLSearchParams(window.location.search);
         if (view !== 'entry') {
@@ -72,6 +81,7 @@
         window.history.replaceState({}, '', newUrl);
       }, [view]);
 
+      // Form data for a single entry submission.
       const [formData, setFormData] = useState({
         name: '',
         email: '',
@@ -80,10 +90,11 @@
         tiebreaker: ''
       });
 
+      // Initial load + periodic refresh while on the scores view.
       useEffect(() => {
         loadData();
 
-        // Auto-refresh every 5 seconds when viewing scores
+        // Auto-refresh every 5 seconds when viewing scores.
         let interval;
         if (view === 'scores') {
           interval = setInterval(() => {
@@ -91,12 +102,13 @@
           }, 5000); // Refresh every 5 seconds
         }
 
-        // Cleanup interval on unmount or view change
+        // Cleanup interval on unmount or view change.
         return () => {
           if (interval) clearInterval(interval);
         };
       }, [view]);
 
+      // Fetch entries, questions, and correct answers from Supabase.
       const loadData = async () => {
         // Load entries
         const { data: entriesData } = await supabaseClient
@@ -110,7 +122,7 @@
           })));
         }
 
-        // Load questions
+        // Load questions (single row table with id = 1).
         const { data: questionsData } = await supabaseClient
           .from('questions')
           .select('questions')
@@ -118,7 +130,7 @@
           .single();
         if (questionsData) setQuestions(questionsData.questions);
 
-        // Load correct answers
+        // Load correct answers + settings (answered mask, entries open/closed, total points).
         const { data: answersData } = await supabaseClient
           .from('correct_answers')
           .select('*')
@@ -137,6 +149,7 @@
         }
       };
 
+      // Convert [true/false] answers array into a bitmask for storage.
       const arrayToBits = (arr) => {
         let bits = 0;
         for (let i = 0; i < 20; i++) {
@@ -145,6 +158,7 @@
         return bits;
       };
 
+      // Convert stored bitmask into [true/false] answers array.
       const bitsToArray = (bits) => {
         const arr = [];
         for (let i = 0; i < 20; i++) {
@@ -153,6 +167,7 @@
         return arr;
       };
 
+      // Verify admin login using a Supabase Edge Function.
       const handleLogin = async () => {
         setLoading(true);
         const { data } = await supabaseClient.functions.invoke('verify-admin', {
@@ -168,6 +183,7 @@
         }
       };
 
+      // Submit a new entry to the database after basic validation.
       const handleSubmit = async () => {
         if (!formData.name || formData.answers.includes(null) || !formData.tiebreaker) {
           alert('Please complete all fields');
@@ -187,6 +203,7 @@
         loadData();
       };
 
+      // Update correct answer bitmask and answered mask for a single question.
       const handleCorrectAnswerChange = async (index, value) => {
         const { data: current } = await supabaseClient
           .from('correct_answers')
@@ -222,6 +239,7 @@
         }
       };
 
+      // Export correct answers as a simple Yes/No CSV for quick reference.
       const exportCorrectAnswers = () => {
         // Create two rows: Yes answers and No answers
         const yesRow = ['Yes'];
@@ -256,6 +274,7 @@
         document.body.removeChild(link);
       };
 
+      // Export all questions (one per line) as a CSV.
       const exportQuestions = () => {
         // One question per line
         const csvContent = questions.map(q => `"${q}"`).join('\n');
@@ -271,6 +290,7 @@
         document.body.removeChild(link);
       };
 
+      // Generate a standalone, shareable HTML results page and download it.
       const exportResultsPage = () => {
         const sorted = sortEntries(entries);
         const totalAnswered = Object.keys(correctAnswers).length;
@@ -358,6 +378,7 @@
         link.click();
         document.body.removeChild(link);
       };
+      // Export all entries, answers, and contact info to CSV.
       const exportToCSV = () => {
         // Create CSV header
         const headers = ['Name'];
@@ -396,6 +417,7 @@
         link.click();
         document.body.removeChild(link);
       };
+      // Toggle paid/unpaid flag for a specific entry.
       const handleTogglePayment = async (entryId, currentStatus) => {
         setUpdatingPayment(entryId);
         const { error } = await supabaseClient
@@ -408,6 +430,7 @@
         }
         setUpdatingPayment(null);
       };
+      // Open or close entries globally.
       const handleToggleEntries = async () => {
         const newState = !entriesOpen;
         const { error } = await supabaseClient
@@ -421,6 +444,7 @@
         }
       };
 
+      // Persist edited questions back to Supabase.
       const handleSaveQuestions = async () => {
         setLoading(true);
         const { error } = await supabaseClient
@@ -434,6 +458,7 @@
         }
       };
 
+      // Calculate an entry's score based on answered questions so far.
       const calculateScore = (entry) => {
         let score = 0;
         entry.answers.forEach((ans, i) => {
@@ -442,12 +467,14 @@
         return score;
       };
 
+      // Percentage of "Yes" answers for a question.
       const calculatePercentages = (questionIndex) => {
         if (entries.length === 0) return 0;
         const yesCount = entries.filter(e => e.answers[questionIndex] === true).length;
         return Math.round((yesCount / entries.length) * 100);
       };
 
+      // Sort entries by score, then by tiebreaker distance if available.
       const sortEntries = (entries) => {
         return [...entries].sort((a, b) => {
           const scoreA = calculateScore(a);
@@ -464,6 +491,7 @@
         });
       };
 
+      // Save the actual total points for tiebreaker comparisons.
       const handleActualTotalPointsChange = async (value) => {
         const points = value === '' ? null : parseInt(value);
         const { error } = await supabaseClient
@@ -476,6 +504,7 @@
         }
       };
 
+      // Compose a mailto link that BCCs all players with emails.
       const handleSendEmail = async () => {
         if (!emailMessage.trim()) {
           alert('Please enter a message');
@@ -503,6 +532,7 @@
         window.location.href = mailtoLink;
       };
 
+      // Dangerous admin action: clears all entries and correct answers.
       const handleResetForNextYear = async () => {
         const confirmText = 'RESET';
         const userInput = prompt(
@@ -549,13 +579,16 @@
         }
       };
 
-      // Entry Form
+      // =============================
+      // Entry Form View (public)
+      // =============================
       if (view === 'entry') {
         return (
           <div className="min-h-screen bg-gradient-to-br from-blue-900 via-purple-900 to-blue-800 p-4">
             <div className="max-w-3xl mx-auto bg-white rounded-lg shadow-2xl p-6">
               <div className="flex items-center justify-between mb-6">
                 <div className="flex flex-col items-center w-full gap-4">
+                  {/* Event branding */}
                   <img
                     src="https://upload.wikimedia.org/wikipedia/en/thumb/1/16/Super_Bowl_logo.svg/2560px-Super_Bowl_logo.svg.png"
                     alt="Vince Lombardi Trophy"
@@ -564,6 +597,7 @@
                   <h2 className="text-3xl font-bold">Dan's Super Bowl Teaser Pool</h2>
                 </div>
                 <div className="flex gap-2 justify-center mt-4">
+                  {/* Navigation between views */}
                   <button onClick={() => setView('scores')} className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">
                     View Scores
                   </button>
@@ -621,6 +655,7 @@
               </div>
 
               <h2 className="text-xl font-bold mb-4">Answer YES or NO:</h2>
+              {/* 20 pool questions rendered with radio buttons */}
               <div className="space-y-3 mb-6">
                 {questions.map((q, i) => (
                   <div key={i} className="bg-gray-50 p-4 rounded-lg">
@@ -668,6 +703,7 @@
                 />
               </div>
 
+              {/* Entries can be closed by admin */}
               {!entriesOpen ? (
                 <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg text-center">
                   <p className="font-bold">Entries are now closed</p>
@@ -692,7 +728,10 @@
         );
       }
 
-      // Login View - also show login if trying to access admin while not logged in
+      // =============================
+      // Login View (admin access)
+      // =============================
+      // Also show login if trying to access admin while not logged in.
       if (view === 'login' || (view === 'admin' && !isAdmin)) {
         return (
           <div className="min-h-screen bg-gradient-to-br from-blue-900 via-purple-900 to-blue-800 p-4 flex items-center justify-center">
@@ -748,7 +787,10 @@
         );
       }
 
-      // Admin View - redirect to login if not authenticated
+      // =============================
+      // Admin View (protected)
+      // =============================
+      // Redirect to login if not authenticated.
       if (view === 'admin') {
         if (!isAdmin) {
           return (
@@ -775,6 +817,7 @@
                   <h1 className="text-3xl font-bold">Admin Panel</h1>
                 </div>
                 <div className="flex gap-2">
+                  {/* Admin actions: export, open/close, edit, reset, logout */}
                   <button
                     onClick={exportResultsPage}
                     className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 font-semibold"
@@ -818,6 +861,7 @@
                 </div>
               </div>
 
+              {/* Question editor vs main admin dashboard */}
               {editingQuestions ? (
                 <div className="space-y-3 mb-6">
                   <h2 className="text-xl font-bold mb-4">Edit Questions</h2>
@@ -846,6 +890,7 @@
                 </div>
               ) : (
                 <>
+                  {/* Actual total points input for tiebreaker sorting */}
                   <div className="mb-6">
                     <label className="block font-semibold mb-2">Actual Total Points in Game (for tiebreaker)</label>
                     <input
@@ -860,6 +905,7 @@
                     )}
                   </div>
 
+                  {/* Email composer that uses mailto with BCC list */}
                   <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
                     <div className="flex items-center justify-between mb-3">
                       <h3 className="font-semibold text-lg">Email Players</h3>
@@ -925,6 +971,7 @@
                       </button>
                     </div>
                   </div>
+                  {/* Correct-answer selector per question */}
                   <div className="space-y-3 mb-8">
                     {questions.map((q, i) => (
                       <div key={i} className={`p-4 rounded-lg border-2 ${
@@ -990,6 +1037,7 @@
                       </div>
                     </div>
                   </div>
+                  {/* Entries table with payment toggles and answer chips */}
                   <div className="overflow-x-auto">
                     <table className="w-full text-sm">
                       <thead>
@@ -1055,7 +1103,9 @@
         );
       }
 
-      // Scores View
+      // =============================
+      // Scores View (public)
+      // =============================
       if (view === 'scores') {
         const sorted = sortEntries(entries);
         const totalAnswered = Object.keys(correctAnswers).length;
@@ -1091,6 +1141,7 @@
                     </select>
                   </div>
                 </div>
+                {/* Navigation back to the entry form */}
                 <div className="flex justify-center mt-4">
                   <button onClick={() => setView('entry')} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
                     Back to Entry Form
@@ -1107,6 +1158,7 @@
                         <div>Score</div>
                         <div className="text-xs font-normal text-gray-500">of {totalAnswered}</div>
                       </th>
+                      {/* Question headers include hover tooltips and answer status */}
                       {questions.map((q, i) => (
                         <th key={i} className={`px-1 py-2 text-center relative group cursor-help ${correctAnswers[i] !== undefined ? 'bg-blue-100' : ''}`}>
                           <div className="font-bold flex items-center justify-center gap-1">
