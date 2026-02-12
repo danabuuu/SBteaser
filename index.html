@@ -817,24 +817,34 @@
                   <h1 className="text-3xl font-bold">Admin Panel</h1>
                 </div>
                 <div className="flex flex-wrap gap-2 w-full lg:w-auto">
-                  {/* Admin actions: export, open/close, edit, reset, logout */}
+                  {/* Admin actions: return, edit, open/close, export, reset */}
+                  <button
+                    onClick={() => {
+                      setIsAdmin(false);
+                      setView('entry');
+                    }}
+                    className="w-full sm:w-auto px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 font-semibold text-center"
+                  >
+                    Return to Entry Page
+                  </button>
+
                   <button
                     onClick={() => setEditingQuestions(!editingQuestions)}
-                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold"
+                    className="w-full sm:w-auto px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold text-center"
                   >
                     {editingQuestions ? 'Done Editing Questions' : 'Edit Questions'}
                   </button>
 
                   <button
                     onClick={handleToggleEntries}
-                    className={`w-full sm:w-auto px-4 py-2 ${entriesOpen ? 'bg-orange-600 hover:bg-orange-700' : 'bg-green-600 hover:bg-green-700'} text-white rounded-lg font-semibold`}
+                    className={`w-full sm:w-auto px-4 py-2 ${entriesOpen ? 'bg-orange-600 hover:bg-orange-700' : 'bg-green-600 hover:bg-green-700'} text-white rounded-lg font-semibold text-center`}
                   >
                     {entriesOpen ? 'Close Entries' : 'Open Entries'}
                   </button>
 
                   <button
                     onClick={exportResultsPage}
-                    className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 font-semibold"
+                    className="w-full sm:w-auto px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 font-semibold text-center"
                   >
                     Export Results Page (HTML)
                   </button>
@@ -842,19 +852,9 @@
                   <button
                     onClick={handleResetForNextYear}
                     disabled={loading}
-                    className="w-full sm:w-auto px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 font-semibold disabled:opacity-50"
+                    className="w-full sm:w-auto px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 font-semibold disabled:opacity-50 text-center"
                   >
                     Reset for Next Year
-                  </button>
-
-                  <button
-                    onClick={() => {
-                      setIsAdmin(false);
-                      setView('entry');
-                    }}
-                    className="w-full sm:w-auto px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 flex items-center gap-2"
-                  >
-                    Return to Entry Page
                   </button>
                 </div>
               </div>
