@@ -61,6 +61,7 @@
       const [updatingPayment, setUpdatingPayment] = useState(null);
       const [showEmailComposer, setShowEmailComposer] = useState(false);
       const [emailMessage, setEmailMessage] = useState('');
+      const [includeScoresInEmail, setIncludeScoresInEmail] = useState(false);
       // Get initial view from URL query string (e.g., ?view=scores)
       const getInitialView = () => {
         const params = new URLSearchParams(window.location.search);
@@ -520,12 +521,77 @@
 
         const scoresUrl = window.location.origin + window.location.pathname + '?view=scores';
         const subject = encodeURIComponent('Super Bowl Pool Update');
-        const body = encodeURIComponent(
-          emailMessage + '\n\n' +
-          'View Current Scores:\n' +
-          scoresUrl + '\n\n' +
-          'Good luck!'
-        );
+        
+        let emailBody = emailMessage + '\n\n' + 'View Current Scores:\n' + scoresUrl + '\n\n';
+        
+        // Generate scores grid HTML if checkbox is checked
+        if (includeScoresInEmail) {
+          const sorted = sortEntries(entries);
+          const totalAnswered = Object.keys(correctAnswers).length;
+          const calculatePercentage = (questionIndex) => {
+            if (entries.length === 0) return 0;
+            const yesCount = entries.filter(e => e.answers[questionIndex] === true).length;
+            return Math.round((yesCount / entries.length) * 100);
+          };
+          
+          const year = new Date().getFullYear();
+          const actualPointsHtml = actualTotalPoints !== null 
+            ? '<div class="text-md text-gray-600">Actual Total Points: ' + actualTotalPoints + '</div>' 
+            : '';
+          
+          const questionsHtml = questions.map((q, i) => {
+            const isAnswered = correctAnswers[i] !== undefined;
+            const bgClass = isAnswered ? 'bg-blue-100' : '';
+            const checkmark = isAnswered ? '<span class="text-green-600">✓</span>' : '';
+            return '<th class="px-1 py-2 text-center ' + bgClass + '">' +
+              '<div class="font-bold flex items-center justify-center gap-1">' + (i + 1) + checkmark + '</div>' +
+              '<div class="text-xs text-gray-500">' + calculatePercentage(i) + '% Y</div>' +
+              '</th>';
+          }).join('');
+
+          const rowsHtml = sorted.map((entry, rank) => {
+            const answersHtml = entry.answers.map((ans, i) => {
+              let cellClass = 'px-1 py-2 text-center font-bold ';
+              if (correctAnswers[i] !== undefined) {
+                cellClass += correctAnswers[i] === ans ? 'bg-green-400 text-white' : 'bg-red-200';
+              }
+              return '<td class="' + cellClass + '">' + (ans ? 'Y' : ' N') + '</td>';
+            }).join('');
+            
+            return '<tr class="border-b">' +
+              '<td class="px-2 py-2 font-bold">' + (rank + 1) + '</td>' +
+              '<td class="px-2 py-2 font-semibold">' + entry.name + '</td>' +
+              '<td class="px-2 py-2 text-center font-bold text-lg text-purple-600">' + calculateScore(entry) + '</td>' +
+              answersHtml +
+              '<td class="px-2 py-2 text-center text-gray-600">' + entry.tiebreaker + '</td>' +
+              '</tr>';
+          }).join('');
+
+          const scoresGridHtml = '\n\n------- Current Scores Grid -------\n\n' +
+            '<!DOCTYPE html><html><head>' +
+            '<style>body{font-family:Arial,sans-serif;padding:20px;}table{border-collapse:collapse;width:100%;font-size:12px;}' +
+            'th,td{border:1px solid #ddd;padding:8px;text-align:center;}' +
+            'th{background-color:#f3f4f6;font-weight:bold;}' +
+            '.bg-green-400{background-color:#4ade80;}.bg-red-200{background-color:#fecaca;}' +
+            '.bg-blue-100{background-color:#dbeafe;}.text-purple-600{color:#9333ea;}' +
+            '.text-green-600{color:#16a34a;}</style>' +
+            '</head><body>' +
+            '<h2>Super Bowl Pool - Live Scoreboard ' + year + '</h2>' +
+            '<p>' + totalAnswered + ' of 20 questions answered • Max possible score: ' + totalAnswered + '</p>' +
+            actualPointsHtml +
+            '<table><thead><tr>' +
+            '<th>Rank</th><th>Name</th><th>Score<br/><small>of ' + totalAnswered + '</small></th>' +
+            questionsHtml +
+            '<th>TB</th>' +
+            '</tr></thead><tbody>' + rowsHtml + '</tbody></table>' +
+            '</body></html>';
+          
+          emailBody += scoresGridHtml;
+        }
+        
+        emailBody += '\n\nGood luck!';
+        
+        const body = encodeURIComponent(emailBody);
         const bcc = encodeURIComponent(recipients.join(','));
 
         const mailtoLink = `mailto:?bcc=${bcc}&subject=${subject}&body=${body}`;
@@ -927,6 +993,20 @@
                           />
                           <p className="text-xs text-gray-600 mt-1">
                             A link to view scores will be automatically included. This will open your email client with all recipients pre-filled.
+                          </p>
+                        </div>
+                        <div>
+                          <label className="flex items-center gap-2 cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={includeScoresInEmail}
+                              onChange={(e) => setIncludeScoresInEmail(e.target.checked)}
+                              className="w-4 h-4"
+                            />
+                            <span className="text-sm font-semibold">Include current scores grid in email</span>
+                          </label>
+                          <p className="text-xs text-gray-600 mt-1 ml-6">
+                            The full HTML scoreboard will be embedded in the email body
                           </p>
                         </div>
                         <div className="flex items-center gap-3">
