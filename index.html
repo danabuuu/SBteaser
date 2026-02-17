@@ -91,6 +91,17 @@
         tiebreaker: ''
       });
 
+      // Check for existing auth session on mount.
+      useEffect(() => {
+        const checkSession = async () => {
+          const { data: { session } } = await supabaseClient.auth.getSession();
+          if (session) {
+            setIsAdmin(true);
+          }
+        };
+        checkSession();
+      }, []);
+
       // Initial load + periodic refresh while on the scores view.
       useEffect(() => {
         loadData();
@@ -168,20 +179,28 @@
         return arr;
       };
 
-      // Verify admin login using a Supabase Edge Function.
+      // Verify admin login using Supabase Authentication.
       const handleLogin = async () => {
         setLoading(true);
-        const { data } = await supabaseClient.functions.invoke('verify-admin', {
-          body: { username: loginForm.username, password: loginForm.password }
+        const { data, error } = await supabaseClient.auth.signInWithPassword({
+          email: loginForm.username,
+          password: loginForm.password
         });
         setLoading(false);
-        if (data?.valid) {
+        if (data?.session) {
           setIsAdmin(true);
           setView('admin');
           setLoginForm({ username: '', password: '' });
         } else {
-          alert('Invalid credentials');
+          alert('Invalid credentials: ' + (error?.message || 'Unknown error'));
         }
+      };
+
+      // Log out admin user.
+      const handleLogout = async () => {
+        await supabaseClient.auth.signOut();
+        setIsAdmin(false);
+        setView('entry');
       };
 
       // Submit a new entry to the database after basic validation.
@@ -883,15 +902,13 @@
                   <h1 className="text-3xl font-bold">Admin Panel</h1>
                 </div>
                 <div className="flex flex-wrap gap-2 w-full lg:w-auto">
-                  {/* Admin actions: return, edit, open/close, export, reset */}
+                  {/* Admin actions: logout, edit, open/close, export, reset */}
                   <button
-                    onClick={() => {
-                      setIsAdmin(false);
-                      setView('entry');
-                    }}
-                    className="w-full sm:w-auto px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 font-semibold text-center"
+                    onClick={handleLogout}
+                    className="w-full sm:w-auto px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 font-semibold text-center flex items-center justify-center gap-2"
                   >
-                    Return to Entry Page
+                    <LogOut />
+                    Logout
                   </button>
 
                   <button
