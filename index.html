@@ -32,6 +32,21 @@
     // Create a single Supabase client instance for all queries.
     const supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
+    // Uptime ping: if ?uptime is in the URL, run a lightweight DB query and
+    // render a plain "OK" response so UptimeRobot can confirm the DB is alive.
+    if (new URLSearchParams(window.location.search).has('uptime')) {
+      (async () => {
+        try {
+          await supabaseClient.from('questions').select('id').eq('id', 1).single();
+          document.getElementById('root').innerHTML =
+            '<pre style="font-family:monospace;padding:1rem">OK</pre>';
+        } catch (e) {
+          document.getElementById('root').innerHTML =
+            '<pre style="font-family:monospace;padding:1rem">ERROR: ' + e.message + '</pre>';
+        }
+      })();
+    } else {
+
     // SVG Icons used across the UI (inline so no build step is required).
     const Trophy = () => <svg className="w-8 h-8 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg>;
     const Users = () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" /></svg>;
@@ -1315,6 +1330,7 @@
     }
 
     ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+    } // end else (non-uptime path)
   </script>
 </body>
 
